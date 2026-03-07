@@ -1,0 +1,72 @@
+services:
+
+  # -------------------------------------------------------------------
+  # PostgreSQL — our main database
+  # Stores: document metadata, job records, user data
+  # AND: AI vector embeddings (via the pgvector extension)
+  # One database does everything — no separate vector DB needed.
+  # -------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16      # PostgreSQL 16 with pgvector pre-installed
+    container_name: documind_postgres
+    environment:
+      POSTGRES_DB: documind
+      POSTGRES_USER: documind
+      POSTGRES_PASSWORD: documind      # local dev only — never use simple passwords in production
+    ports:
+      - "5432:5432"                    # your Mac can reach PostgreSQL at localhost:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # data survives container restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U documind -d documind"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------
+  # Redis — fast short-term memory (whiteboard)
+  # Used for: Celery task queue (background jobs) + semantic caching
+  # -------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: documind_redis
+    ports:
+      - "6379:6379"                    # your Mac can reach Redis at localhost:6379
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------
+  # MinIO — fake S3 running locally
+  # Stores: uploaded PDF files and documents
+  # Speaks the exact same language as AWS S3 — swap credentials to go live.
+  # Web dashboard available at http://localhost:9001
+  # -------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: documind_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: documind              # this is your "AWS Access Key" locally
+      MINIO_ROOT_PASSWORD: documind123       # this is your "AWS Secret Key" locally
+    ports:
+      - "9000:9000"                          # S3 API — your app talks to this
+      - "9001:9001"                          # web dashboard — you browse files here
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# Permanent storage — Docker keeps this data on your machine
+# even when containers are stopped or restarted
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

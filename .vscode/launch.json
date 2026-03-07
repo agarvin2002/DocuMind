@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Run Django server with full debugger attached
+      // Same as: node --inspect manage.py runserver
+      "name": "Django: Run Server",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/manage.py",
+      "args": ["runserver", "--noreload"],
+      "django": true,
+      "justMyCode": true,
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "core.settings"
+      }
+    },
+    {
+      // Run a single pytest test file or all tests with debugger
+      // Same as: node --inspect node_modules/.bin/jest
+      "name": "Django: Run Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests/", "-v"],
+      "django": true,
+      "justMyCode": true,
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "core.settings"
+      }
+    }
+  ]
+}
