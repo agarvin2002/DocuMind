@@ -49,7 +49,7 @@ class DocumentUploadView(APIView):
 
         logger.info(
             "Document upload accepted",
-            extra={"document_id": str(doc.id), "filename": original_filename},
+            extra={"document_id": str(doc.id), "original_filename": original_filename},
         )
         return Response(DocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
