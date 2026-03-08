@@ -31,3 +31,6 @@ class DocumentChunkAdmin(admin.ModelAdmin):
     search_fields = ["child_text", "parent_text"]
     ordering = ["document", "chunk_index"]
     readonly_fields = ["id", "created_at", "embedding"]
+    # Without raw_id_fields, the list_filter dropdown loads ALL document rows on
+    # every admin page request — a full table scan that grows with the dataset.
+    raw_id_fields = ["document"]

@@ -93,7 +93,12 @@ ASGI_APPLICATION = "core.asgi.application"
 # Database
 # ---------------------------------------------------------------------------
 DATABASES = {
-    "default": env.db("DATABASE_URL")
+    "default": {
+        **env.db("DATABASE_URL"),
+        # Reuse DB connections across requests rather than opening a new one per request.
+        # Prevents connection exhaustion under concurrent Celery + web traffic.
+        "CONN_MAX_AGE": env.int("CONN_MAX_AGE", default=60),
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -177,6 +182,11 @@ CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=300)         
 
 # Prevents slow ingestion tasks from holding prefetched slots hostage.
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# ---------------------------------------------------------------------------
+# Upload limits
+# ---------------------------------------------------------------------------
+DOCUMIND_MAX_UPLOAD_SIZE_MB = env.int("DOCUMIND_MAX_UPLOAD_SIZE_MB", default=50)
 
 # ---------------------------------------------------------------------------
 # Security headers
