@@ -183,6 +183,11 @@ CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=300)         
 # Prevents slow ingestion tasks from holding prefetched slots hostage.
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
+# Flower monitoring: workers broadcast task lifecycle events to the broker.
+# Without these, Flower shows workers as online but the Tasks tab stays empty.
+CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
+
 # ---------------------------------------------------------------------------
 # Upload limits
 # ---------------------------------------------------------------------------

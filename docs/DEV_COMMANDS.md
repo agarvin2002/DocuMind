@@ -285,6 +285,12 @@ docker compose exec redis redis-cli ping
 ```
 Expected response: `PONG`
 
+### Check Flower dashboard is running
+```bash
+curl -u admin:admin http://localhost:5555/healthcheck
+```
+Expected response: `{"status": "OK"}`
+
 ---
 
 ## Viewing Logs
@@ -302,8 +308,9 @@ docker compose logs -f
 ### View logs for a specific service
 ```bash
 docker compose logs postgres
-docker compose logs qdrant
 docker compose logs redis
+docker compose logs flower
+docker compose logs minio
 ```
 
 ### View recent API logs
@@ -371,6 +378,7 @@ Compare with .env.example and fill in any missing values.
 | API | http://localhost:8000/api/ | Main API |
 | API Docs | http://localhost:8000/api/docs/ | Interactive Swagger documentation |
 | Django Admin | http://localhost:8000/admin/ | Database browser — view all data including embeddings |
+| Flower | http://localhost:5555 | Celery task monitoring — real-time task status, worker health, queue depth |
 | LangSmith | https://smith.langchain.com | LLM trace viewer |
 
 ---
