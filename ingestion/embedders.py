@@ -60,7 +60,12 @@ class SentenceTransformerEmbedder:
                 "Loading embedding model",
                 extra={"model_name": self._model_name},
             )
-            self._model = SentenceTransformer(self._model_name)
+            # Force CPU to avoid MPS crashes in forked Celery worker processes.
+            # macOS MPS context is not fork-safe; CPU is portable and sufficient
+            # for development and CI. Override with EMBEDDING_DEVICE in production
+            # if running on a dedicated GPU host (non-forked concurrency).
+            device = os.environ.get("EMBEDDING_DEVICE", "cpu")
+            self._model = SentenceTransformer(self._model_name, device=device)
         except Exception as e:  # noqa: BLE001
             raise EmbeddingGenerationError(
                 f"Failed to load embedding model {self._model_name!r}: {e}"
