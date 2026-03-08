@@ -5,7 +5,7 @@ No database or Docker required — all external calls are mocked.
 
 import io
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -198,18 +198,17 @@ class TestIngestionPipeline:
         mock_embedder = MagicMock()
         mock_embedder.embed_batch.return_value = [[0.1] * 384]
 
-        with patch("ingestion.pipeline.save_chunks"):
-            pipeline = IngestionPipeline(
-                chunker=mock_chunker, embedder=mock_embedder
-            )
-            result = pipeline.run(
-                document_id=uuid.uuid4(),
-                file_obj=open(sample_pdf_path, "rb"),
-                file_type=".pdf",
-            )
+        pipeline = IngestionPipeline(chunker=mock_chunker, embedder=mock_embedder)
+        result = pipeline.run(
+            document_id=uuid.uuid4(),
+            file_obj=open(sample_pdf_path, "rb"),
+            file_type=".pdf",
+        )
 
         assert result.chunk_count == 1
         assert result.page_count >= 1
+        assert len(result.chunks) == 1
+        assert len(result.embeddings) == 1
 
     def test_run_raises_parse_error_on_empty_chunks(self, sample_pdf_path):
         from ingestion.parsers import ParseError

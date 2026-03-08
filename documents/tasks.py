@@ -10,18 +10,19 @@ import uuid
 
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
-from django.core.files.storage import default_storage
 
+from core.tasks import BaseDocuMindTask
 from documents.services import (
     mark_document_failed,
     mark_document_processing,
     mark_document_ready,
+    save_document_chunks,
 )
 
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=0)
+@shared_task(bind=True, max_retries=0, base=BaseDocuMindTask)
 def ingest_document(self, document_id_str: str) -> None:
     """
     Run the full ingestion pipeline for one document.
@@ -31,8 +32,9 @@ def ingest_document(self, document_id_str: str) -> None:
     same error every time, misleading users about progress.
 
     Imports for ingestion modules are local to avoid circular import chains at
-    module load time (tasks → pipeline → vector_store → DocumentChunk → services).
+    module load time (tasks → pipeline → embedders → core.exceptions).
     """
+    from core.storage import StorageClient
     from documents.exceptions import DocumentNotFoundError
     from documents.selectors import get_document_by_id
     from ingestion.pipeline import IngestionPipeline
@@ -49,7 +51,7 @@ def ingest_document(self, document_id_str: str) -> None:
         document = get_document_by_id(document_id)
         file_type = "." + document.original_filename.rsplit(".", 1)[-1].lower()
 
-        with default_storage.open(document.file.name, "rb") as file_obj:
+        with StorageClient().download_file(document.file.name) as file_obj:
             pipeline = IngestionPipeline()
             result = pipeline.run(
                 document_id=document_id,
@@ -57,6 +59,7 @@ def ingest_document(self, document_id_str: str) -> None:
                 file_type=file_type,
             )
 
+        save_document_chunks(document_id, result.chunks, result.embeddings)
         mark_document_ready(document_id, result.chunk_count)
         logger.info(
             "Ingestion task complete",

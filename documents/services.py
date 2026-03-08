@@ -11,7 +11,8 @@ import uuid
 from django.core.files.uploadedfile import UploadedFile
 
 from documents.exceptions import DocumentUploadError
-from documents.models import Document
+from documents.models import Document, DocumentChunk
+from ingestion.chunkers import ChunkData
 
 logger = logging.getLogger(__name__)
 
@@ -102,4 +103,58 @@ def mark_document_failed(document_id: uuid.UUID, error_message: str) -> None:
     logger.error(
         "Document ingestion failed",
         extra={"document_id": str(document_id), "error_message": error_message},
+    )
+
+
+def save_document_chunks(
+    document_id: uuid.UUID,
+    chunks: list[ChunkData],
+    embeddings: list[list[float]],
+) -> None:
+    """
+    Persist a document's chunks and their embeddings to PostgreSQL/pgvector.
+
+    Belongs in the documents service layer — DocumentChunk is a documents model,
+    so write operations on it must live here, not in retrieval/.
+
+    Args:
+        document_id: UUID of the parent Document row.
+        chunks: ChunkData objects produced by the ingestion pipeline.
+        embeddings: Embedding vectors, one per chunk (same order as chunks).
+
+    Raises:
+        ValueError: if len(chunks) != len(embeddings).
+    """
+    if len(chunks) != len(embeddings):
+        raise ValueError(
+            f"chunks ({len(chunks)}) and embeddings ({len(embeddings)}) must have "
+            "the same length"
+        )
+
+    if not chunks:
+        logger.debug(
+            "save_document_chunks called with empty list — nothing to persist",
+            extra={"document_id": str(document_id)},
+        )
+        return
+
+    chunk_objects = [
+        DocumentChunk(
+            document_id=document_id,
+            chunk_index=chunk.chunk_index,
+            child_text=chunk.child_text,
+            parent_text=chunk.parent_text,
+            page_number=chunk.page_number,
+            embedding=embedding,
+        )
+        for chunk, embedding in zip(chunks, embeddings)
+    ]
+
+    # bulk_create writes all rows in a single SQL statement — far fewer round-trips
+    # than calling .save() once per chunk, which matters at scale.
+    DocumentChunk.objects.bulk_create(chunk_objects, batch_size=500)
+
+    logger.info(
+        "Document chunks saved",
+        extra={"document_id": str(document_id), "chunk_count": len(chunk_objects)},
     )
