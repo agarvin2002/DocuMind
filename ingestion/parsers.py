@@ -16,17 +16,13 @@ from typing import IO, Union
 import pypdf
 import pypdf.errors
 
+from core.exceptions import ProcessingError
+
 logger = logging.getLogger(__name__)
 
 
-class ParseError(Exception):
-    """
-    Raised when a document cannot be parsed.
-
-    Kept as a plain Python exception (not a Django exception) so this module
-    can be imported and tested without Django being configured.
-    The task layer in documents/tasks.py translates this to DocumentProcessingError.
-    """
+class ParseError(ProcessingError):
+    """Raised when a document cannot be parsed or produces no extractable text."""
 
 
 class PdfParser:
@@ -87,25 +83,53 @@ class PdfParser:
         return pages
 
 
-def get_parser(file_type: str) -> PdfParser:
+class ParserRegistry:
+    """
+    Class-level registry mapping file extensions to parser instances.
+
+    Parsers register themselves once at module load time via register().
+    New file types extend the registry without editing existing code.
+    """
+
+    _registry: dict[str, PdfParser] = {}
+
+    @classmethod
+    def register(cls, extension: str, parser: PdfParser) -> None:
+        """Register a parser for the given lowercase extension (e.g. ".pdf")."""
+        cls._registry[extension.lower()] = parser
+
+    @classmethod
+    def get(cls, extension: str) -> PdfParser:
+        """
+        Return the registered parser for the given extension.
+
+        Raises:
+            ParseError: if no parser is registered for this extension.
+        """
+        parser = cls._registry.get(extension.lower())
+        if parser is None:
+            raise ParseError(
+                f"Unsupported file type: {extension!r}. "
+                f"Supported: {sorted(cls._registry)}"
+            )
+        return parser
+
+
+# Register built-in parsers once at module load time.
+ParserRegistry.register(".pdf", PdfParser())
+
+
+def get_parser(extension: str) -> PdfParser:
     """
     Return the correct parser for the given file extension.
 
-    Centralising parser selection here means the task layer never contains
-    if/elif chains for file-type routing. New parsers are registered here only.
+    Delegates to ParserRegistry so new parsers can be added via
+    ParserRegistry.register() without editing this function.
 
     Args:
-        file_type: Extension including leading dot, e.g. ".pdf".
+        extension: Extension including leading dot, e.g. ".pdf".
 
     Raises:
         ParseError: if the file type is not supported.
     """
-    parsers: dict[str, PdfParser] = {
-        ".pdf": PdfParser(),
-    }
-    parser = parsers.get(file_type.lower())
-    if parser is None:
-        raise ParseError(
-            f"Unsupported file type: {file_type!r}. Supported: {sorted(parsers)}"
-        )
-    return parser
+    return ParserRegistry.get(extension)

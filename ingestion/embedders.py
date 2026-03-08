@@ -17,19 +17,15 @@ Note:
 import logging
 import os
 
+from core.exceptions import EmbeddingError
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "all-MiniLM-L6-v2"
 
 
-class EmbeddingGenerationError(Exception):
-    """
-    Raised when embedding generation fails.
-
-    Kept as a plain Python exception so this module can be imported and tested
-    without Django being configured. The task layer translates this to
-    the appropriate Django exception if needed.
-    """
+class EmbeddingGenerationError(EmbeddingError):
+    """Raised when the embedding model fails to load or encode a batch of texts."""
 
 
 class SentenceTransformerEmbedder:
