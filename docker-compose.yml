@@ -41,6 +41,28 @@ services:
       retries: 5
 
   # -------------------------------------------------------------------
+  # Flower — Celery monitoring dashboard
+  # Real-time visibility into task state, worker health, and queue depth.
+  # Dashboard available at http://localhost:5555 (requires FLOWER_USER / FLOWER_PASSWORD from .env)
+  # -------------------------------------------------------------------
+  flower:
+    image: mher/flower:2.0
+    container_name: documind_flower
+    command: celery --broker=redis://redis:6379 flower --port=5555
+    environment:
+      FLOWER_BASIC_AUTH: "${FLOWER_USER}:${FLOWER_PASSWORD}"
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5555/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------
   # MinIO — fake S3 running locally
   # Stores: uploaded PDF files and documents
   # Speaks the exact same language as AWS S3 — swap credentials to go live.
