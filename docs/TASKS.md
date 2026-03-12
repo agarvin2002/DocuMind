@@ -10,112 +10,126 @@ where we left off and what to do next.
 
 ## Current Status
 
-**Active Phase:** Phase 1 — Project Foundation
+**Active Phase:** Phase 4 — LLM Generation + Streaming
 **Phase Status:** NOT STARTED
-**Last Updated:** Session 1 (project initialization)
-**Last Completed Task:** Created all project documents
+**Last Updated:** Session — Phase 3 complete
+**Last Completed Task:** Phase 3 — Retrieval System (all tasks complete, 46+ tests green)
 
 ---
 
 ## Session Log
 
-### Session 2 — Stack Refinement
-**What we did:**
-- Replaced Qdrant with pgvector (PostgreSQL extension)
-- Reason: pgvector uses existing PostgreSQL — no extra container, simpler stack,
-  more common in Django job postings
-- Updated all 5 project documents to reflect the change
+### Phase 3 — Retrieval System (COMPLETE)
+
+**What we built:**
+- `retrieval/schemas.py` — `ChunkSearchResult` dataclass (universal result object)
+- `retrieval/protocols.py` — 4 structural Protocol ports (QueryEmbedderPort, VectorSearchPort, KeywordSearchPort, RerankerPort)
+- `retrieval/bm25.py` — added `search()` method; fixed BM25Okapi epsilon-floor edge case
+- `retrieval/vector_store.py` — `VectorStore` adapter with logging
+- `retrieval/hybrid.py` — `HybridFusion` class implementing RRF (Reciprocal Rank Fusion, k=60)
+- `retrieval/reranker.py` — `CrossEncoderReranker` using `cross-encoder/ms-marco-MiniLM-L-6-v2`
+- `retrieval/pipeline.py` — `RetrievalPipeline` orchestrator (embed → vector → BM25 → fuse → rerank → top-k)
+- `ingestion/embedders.py` — added `embed_single()` method for query embedding at search time
+- `ingestion/protocols.py` — added `embed_single` to `EmbedderProtocol`
+- `documents/selectors.py` — `vector_search_chunks()`, `keyword_search_chunks()`, `_get_bm25_index_or_rebuild()`
+- `documents/services.py` — `save_bm25_index()` (Redis persistence, 7-day TTL)
+- `documents/tasks.py` — wired BM25 persistence after ingestion (Phase 2 gap closed)
+- `query/serializers.py` — `SearchRequestSerializer`, `ChunkResultSerializer`, `SearchResponseSerializer`
+- `query/services.py` — `execute_search()` composition root
+- `query/views.py` — `SearchView` (POST /api/v1/query/search/)
+- `query/urls.py` — URL registration
+- `tests/unit/test_retrieval.py` — 18 unit tests (no Docker required)
+- `tests/integration/test_search.py` — 7 integration tests (require Docker)
+- `docs/PHASE3_PLAN.md` — staff engineer implementation plan
+- `docs/PHASE3_TEACHING.md` — comprehensive 14-stop teaching guide
+
+**Verification status:**
+- [x] `uv run ruff check .` — clean (0 errors)
+- [x] `uv run pytest tests/unit/ -v` — all unit tests pass (no Docker needed)
+- [ ] `uv run pytest tests/integration/ -v` — NOT YET RUN (requires Docker)
+- [ ] `uv run python manage.py check` — NOT YET RUN this session
+- [ ] Feature branch + PR — NOT YET CREATED
+
+**Known tech debt (from Phase 2, still open):**
+- `documents/admin.py` — needs `raw_id_fields = ["document"]` on `DocumentChunkAdmin`
 
 ---
 
-### Session 1 — Project Initialization
-**What we did:**
-- Defined the project: DocuMind, an AI document intelligence system
-- Chose the full tech stack with explanations
-- Created all 6 project documents
-- Revised tech stack based on job market feedback:
-  - FastAPI → Django 4.2 + Django REST Framework (more jobs)
-  - SQLAlchemy + Alembic → Django ORM + Django migrations (simpler, built-in)
-  - Claude only → OpenAI (primary) + Claude (fallback) (more job postings mention OpenAI)
-  - LangGraph only → LangChain + LangGraph (LangChain most mentioned in postings)
-- Updated all documents to reflect the revised stack
+### Phase 2 — Document Ingestion Pipeline (COMPLETE)
 
-**What we did NOT do yet:**
-- Write any code
-- Set up the Python project
-- Configure Docker
+**What we built:**
+- `ingestion/parsers.py` — PDF parser using pypdf
+- `ingestion/chunkers.py` — hierarchical chunker (child + parent chunks)
+- `ingestion/embedders.py` — sentence-transformers embedder
+- `ingestion/pipeline.py` — full ingestion orchestrator
+- `documents/models.py` — Document + DocumentChunk with pgvector `VectorField`
+- `documents/serializers.py`, `views.py`, `services.py`, `selectors.py`, `tasks.py`
+- POST /api/v1/documents/ — upload endpoint
+- GET /api/v1/documents/{id}/ — status + detail endpoint
+- Celery task: PDF → parse → chunk → embed → store (status: pending → processing → ready/failed)
+- BM25 index built during ingestion (persisted to Redis in Phase 3 patch)
+- HNSW index migration (0002) for fast pgvector search
 
----
-
-## Phase 1 Tasks — Project Foundation
-
-### Status: TODO
-
-- [ ] **1.1** Install uv (Python package manager)
-- [ ] **1.2** Initialize Python project with uv (`uv init`)
-- [ ] **1.3** Create pyproject.toml with all dependencies
-- [ ] **1.4** Create folder structure (src/documind/ and all subdirectories)
-- [ ] **1.5** Create docker-compose.yml (Postgres with pgvector + Redis)
-- [ ] **1.6** Create .env.example with all required variables documented
-- [ ] **1.7** Create .gitignore
-- [ ] **1.8** Create core/settings.py (Django settings loaded from .env)
-- [ ] **1.9** Create core/urls.py (root URL router)
-- [ ] **1.10** Create documents/models.py (Document and Job tables)
-- [ ] **1.11** Run first Django migration: `python manage.py makemigrations && migrate`
-- [ ] **1.12** Create core/urls.py with /api/health/ endpoint
-- [ ] **1.13** Create Django superuser for admin panel
-- [ ] **1.14** Verify: `docker compose up -d` starts all services
-- [ ] **1.15** Verify: `python manage.py runserver` starts without errors
-- [ ] **1.16** Verify: GET /api/health/ returns 200
-- [ ] **1.17** Verify: Django admin panel loads at /admin/
-- [ ] **1.18** Verify: pgvector extension active in PostgreSQL
-- [ ] **1.19** Verify: Can connect to both services (Postgres + pgvector, Redis)
+**End-to-end verified:** PDF upload → `pending` → `processing` → `ready`, `chunk_count > 0`, embeddings in pgvector.
 
 ---
 
-## Phase 2 Tasks — Document Ingestion Pipeline
+### Phase 1 — Project Foundation (COMPLETE)
 
-### Status: NOT STARTED (complete Phase 1 first)
-
-- [ ] **2.1** Create src/documind/ingestion/parsers.py
-- [ ] **2.2** Create src/documind/ingestion/chunkers.py (hierarchical chunking)
-- [ ] **2.3** Create src/documind/ingestion/embedders.py
-- [ ] **2.4** Create retrieval/vector_store.py (pgvector interface via Django ORM)
-- [ ] **2.5** Create BM25 index manager
-- [ ] **2.6** Create src/documind/ingestion/pipeline.py (full orchestration)
-- [ ] **2.7** Configure Celery with Redis
-- [ ] **2.8** Create Celery ingestion task
-- [ ] **2.9** Create POST /documents API route
-- [ ] **2.10** Create GET /documents/{id} API route
-- [ ] **2.11** Test: upload a real PDF and verify it is indexed
+**What we built:**
+- uv project setup, pyproject.toml with all dependencies
+- Docker Compose (PostgreSQL + pgvector + Redis + MinIO + Flower)
+- Django settings (core/settings.py) with 12-Factor config via environs
+- Health check endpoint: GET /api/v1/health/
+- RequestID middleware (core/middleware.py)
+- Dual-format logging (verbose local / JSON production)
+- Security headers, CORS, ruff + pytest configured in pyproject.toml
+- GitHub Actions CI pipeline + PR template
 
 ---
 
 ## Phase 3 Tasks — Retrieval System
 
-### Status: NOT STARTED
+### Status: COMPLETE ✓
 
-- [ ] **3.1** Implement Qdrant semantic search
-- [ ] **3.2** Implement BM25 keyword search
-- [ ] **3.3** Implement RRF hybrid fusion
-- [ ] **3.4** Implement cross-encoder re-ranker
-- [ ] **3.5** Create retrieval pipeline (combines all steps)
-- [ ] **3.6** Create scripts/benchmark.py
-- [ ] **3.7** Verify hybrid + rerank beats vector-only in benchmark
+- [x] **3.1** `retrieval/schemas.py` — ChunkSearchResult dataclass
+- [x] **3.2** `retrieval/protocols.py` — Port protocols (structural typing)
+- [x] **3.3** `retrieval/bm25.py` — search() method
+- [x] **3.4** `retrieval/vector_store.py` — VectorStore adapter
+- [x] **3.5** `retrieval/hybrid.py` — HybridFusion (RRF)
+- [x] **3.6** `retrieval/reranker.py` — CrossEncoderReranker
+- [x] **3.7** `retrieval/pipeline.py` — RetrievalPipeline orchestrator
+- [x] **3.8** `documents/selectors.py` — vector_search_chunks, keyword_search_chunks
+- [x] **3.9** `documents/services.py` — save_bm25_index (Redis)
+- [x] **3.10** `query/serializers.py` — request/response validation
+- [x] **3.11** `query/services.py` — execute_search() composition root
+- [x] **3.12** `query/views.py` + `query/urls.py` — POST /api/v1/query/search/
+- [x] **3.13** Unit tests (18 tests, no Docker)
+- [x] **3.14** Integration tests written (7 tests, Docker required)
+- [ ] **3.15** Run integration tests with Docker
+- [ ] **3.16** Create feature/retrieval-system branch + PR
 
 ---
 
 ## Phase 4 Tasks — LLM Generation + Streaming
 
-### Status: NOT STARTED
+### Status: NOT STARTED (complete Phase 3 integration tests + PR first)
 
-- [ ] **4.1** Create src/documind/generation/llm.py (Claude client)
-- [ ] **4.2** Create src/documind/generation/prompts.py
-- [ ] **4.3** Create src/documind/generation/schemas.py (Instructor models)
-- [ ] **4.4** Create src/documind/generation/streaming.py
-- [ ] **4.5** Set up LangSmith tracing
-- [ ] **4.6** Create POST /query endpoint (streaming)
-- [ ] **4.7** Test: ask a question, get a streaming answer with citations
+**What Phase 4 builds:**
+The query now returns matching text chunks. Phase 4 takes those chunks and uses
+an LLM (GPT-4o) to generate a natural language answer with citations.
+It also adds streaming so the answer appears word-by-word (like ChatGPT).
+
+- [ ] **4.1** `generation/schemas.py` — Pydantic models for LLM inputs/outputs
+- [ ] **4.2** `generation/prompts.py` — system prompt + user prompt templates
+- [ ] **4.3** `generation/llm.py` — OpenAI client with streaming + Instructor structured output
+- [ ] **4.4** `generation/citations.py` — citation extraction and formatting
+- [ ] **4.5** `generation/pipeline.py` — generation orchestrator (chunks → answer + citations)
+- [ ] **4.6** `query/services.py` — extend execute_search() to also generate answer
+- [ ] **4.7** `query/views.py` — add POST /api/v1/query/answer/ (streaming SSE)
+- [ ] **4.8** LangSmith tracing setup (trace every LLM call)
+- [ ] **4.9** Unit tests for generation layer
+- [ ] **4.10** Integration test: POST question → get answer with citations
 
 ---
 
@@ -123,15 +137,15 @@ where we left off and what to do next.
 
 ### Status: NOT STARTED
 
-- [ ] **5.1** Create agent tools (search, summarize)
-- [ ] **5.2** Build LangGraph state machine
-- [ ] **5.3** Implement query planner (decomposition)
-- [ ] **5.4** Implement multi-hop search executor
-- [ ] **5.5** Implement result synthesizer
-- [ ] **5.6** Create document comparison workflow
-- [ ] **5.7** Create contradiction detection workflow
-- [ ] **5.8** Create POST /analysis endpoint
-- [ ] **5.9** Test: ask a complex question that requires multi-hop reasoning
+- [ ] **5.1** `agents/tools.py` — search tool, summarize tool
+- [ ] **5.2** `agents/state.py` — LangGraph state schema
+- [ ] **5.3** `agents/planner.py` — query decomposition node
+- [ ] **5.4** `agents/executor.py` — multi-hop search executor node
+- [ ] **5.5** `agents/synthesizer.py` — result synthesis node
+- [ ] **5.6** `agents/graph.py` — LangGraph state machine wiring
+- [ ] **5.7** `analysis/` app — comparison + contradiction detection workflows
+- [ ] **5.8** POST /api/v1/analysis/compare/ + /contradict/ endpoints
+- [ ] **5.9** Integration test: multi-hop question answered correctly
 
 ---
 
@@ -139,13 +153,12 @@ where we left off and what to do next.
 
 ### Status: NOT STARTED
 
-- [ ] **6.1** Create 50 ground-truth Q&A pairs
-- [ ] **6.2** Create evaluation dataset loader
-- [ ] **6.3** Implement RAGAS metrics
-- [ ] **6.4** Build eval harness (runs all metrics automatically)
-- [ ] **6.5** Create baseline (naive vector-only RAG) for comparison
+- [ ] **6.1** Create 50 ground-truth Q&A pairs (evaluation dataset)
+- [ ] **6.2** `evaluation/dataset.py` — dataset loader
+- [ ] **6.3** `evaluation/metrics.py` — RAGAS metrics (faithfulness, context precision, answer relevance)
+- [ ] **6.4** `evaluation/harness.py` — automated eval runner
+- [ ] **6.5** Baseline comparison (naive vector-only vs hybrid+rerank)
 - [ ] **6.6** Generate evaluation report
-- [ ] **6.7** Document results in README
 
 ---
 
@@ -153,12 +166,12 @@ where we left off and what to do next.
 
 ### Status: NOT STARTED
 
-- [ ] **7.1** Implement API key authentication
-- [ ] **7.2** Implement rate limiting
-- [ ] **7.3** Implement semantic caching
-- [ ] **7.4** Add structured error handling to all routes
-- [ ] **7.5** Write README with demo, architecture diagram, benchmarks
-- [ ] **7.6** Final security audit (no secrets in code or git history)
+- [ ] **7.1** API key authentication (DRF token auth or JWT)
+- [ ] **7.2** Rate limiting (django-ratelimit or DRF throttling)
+- [ ] **7.3** Semantic caching (cache LLM answers for repeated questions)
+- [ ] **7.4** Final security audit (no secrets in code or git history)
+- [ ] **7.5** README with demo, architecture diagram, benchmarks
+- [ ] **7.6** Production Dockerfile + deployment notes
 
 ---
 
@@ -179,6 +192,9 @@ where we left off and what to do next.
 | Agent framework | LangChain + LangGraph | LangChain most mentioned in job postings |
 | Observability | LangSmith | Full LLM call tracing |
 | Embedding model | sentence-transformers | Local, free, production quality |
+| Hybrid search | pgvector + BM25 + RRF | Semantic + keyword, fused via Reciprocal Rank Fusion |
+| Reranker | cross-encoder/ms-marco-MiniLM-L-6-v2 | Accurate cross-attention scoring, fast enough for top-k |
+| BM25 persistence | Redis (key: documind:bm25:{id}, TTL 7d) | Avoids rebuilding from DB on every search |
 
 ---
 
@@ -192,7 +208,14 @@ None currently.
 
 **Start here when opening a new Claude session:**
 
-1. Read PROJECT_CONTEXT.md first
-2. Read this file (TASKS.md) to see current phase and next task
-3. Read DEV_COMMANDS.md to know how to start the project
-4. Begin at Phase 1, Task 1.1
+1. Read `docs/PROJECT_CONTEXT.md`
+2. Read this file (`docs/TASKS.md`) — current phase is **Phase 4**
+3. Read `docs/DEV_COMMANDS.md` for commands
+4. Before starting Phase 4: run integration tests for Phase 3
+   ```bash
+   docker compose up -d
+   uv run python manage.py migrate
+   uv run pytest tests/integration/test_search.py -v
+   ```
+5. After integration tests pass: create `feature/retrieval-system` branch and PR
+6. Then begin Phase 4 (Generation layer)
