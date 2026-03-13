@@ -1,0 +1,120 @@
+"""
+retrieval/pipeline.py — Orchestrates the full hybrid retrieval sequence.
+
+Search sequence:
+    1. Embed query          → 384-dim vector
+    2. Vector search        → top (k * candidate_multiplier) semantic candidates
+    3. Keyword search       → top (k * candidate_multiplier) BM25 candidates
+    4. RRF fusion           → merged and de-duplicated candidate list
+    5. Cross-encoder rerank → re-score fused candidates by reading query + chunk together
+    6. Return top k
+
+candidate_multiplier=3 ensures the reranker has a wide enough pool to surface
+the best k results, compensating for blind spots in each individual search method.
+
+Usage:
+    from retrieval.pipeline import RetrievalPipeline
+
+    pipeline = RetrievalPipeline(
+        embedder=embedder,
+        vector_search_fn=vector_search_chunks,
+        keyword_search_fn=keyword_search_chunks,
+        reranker=reranker,
+    )
+    results = pipeline.run(query="what are the risks?", document_id=doc_id, k=10)
+"""
+
+import logging
+import uuid
+
+from retrieval.hybrid import HybridFusion
+from retrieval.protocols import (
+    KeywordSearchPort,
+    QueryEmbedderPort,
+    RerankerPort,
+    VectorSearchPort,
+)
+from retrieval.schemas import ChunkSearchResult
+from retrieval.vector_store import VectorStore
+
+logger = logging.getLogger(__name__)
+
+
+class RetrievalPipeline:
+    """
+    Combines vector search, BM25 keyword search, RRF fusion, and cross-encoder
+    reranking into a single retrieval call.
+
+    All dependencies are injected at construction time so the pipeline contains
+    no Django imports and can be tested with lightweight in-memory fakes.
+    """
+
+    def __init__(
+        self,
+        embedder: QueryEmbedderPort,
+        vector_search_fn: VectorSearchPort,
+        keyword_search_fn: KeywordSearchPort,
+        reranker: RerankerPort,
+        candidate_multiplier: int = 3,
+    ) -> None:
+        self._embedder = embedder
+        self._vector_store = VectorStore(search_fn=vector_search_fn)
+        self._keyword_search_fn = keyword_search_fn
+        self._reranker = reranker
+        self._fusion = HybridFusion()
+        self._candidate_multiplier = candidate_multiplier
+
+    def run(
+        self,
+        query: str,
+        document_id: uuid.UUID,
+        k: int,
+    ) -> list[ChunkSearchResult]:
+        """
+        Execute the full retrieval pipeline and return the top-k results.
+
+        Args:
+            query: The user's search query string.
+            document_id: UUID of the document to search within.
+            k: Number of final results to return.
+
+        Returns:
+            List of ChunkSearchResult ordered by cross-encoder score descending.
+            May be shorter than k if the document has fewer matching chunks.
+        """
+        candidates_k = k * self._candidate_multiplier
+
+        logger.info(
+            "Retrieval pipeline starting",
+            extra={"document_id": str(document_id), "k": k, "candidates_k": candidates_k},
+        )
+
+        # Step 1: embed the query into a vector.
+        embedding = self._embedder.embed_single(query)
+
+        # Step 2: semantic vector search.
+        vector_results = self._vector_store.search(embedding, document_id, candidates_k)
+
+        # Step 3: BM25 keyword search.
+        keyword_results = self._keyword_search_fn(query, document_id, candidates_k)
+
+        # Step 4: merge both lists using Reciprocal Rank Fusion.
+        fused_results = self._fusion.fuse(vector_results, keyword_results)
+
+        # Step 5: re-rank the fused shortlist with the cross-encoder.
+        reranked_results = self._reranker.rerank(query, fused_results)
+
+        # Step 6: return the final top-k.
+        final_results = reranked_results[:k]
+
+        logger.info(
+            "Retrieval pipeline complete",
+            extra={
+                "document_id": str(document_id),
+                "vector_count": len(vector_results),
+                "keyword_count": len(keyword_results),
+                "fused_count": len(fused_results),
+                "final_count": len(final_results),
+            },
+        )
+        return final_results
