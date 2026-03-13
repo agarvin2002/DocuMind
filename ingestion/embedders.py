@@ -108,3 +108,7 @@ class SentenceTransformerEmbedder:
             },
         )
         return result
+
+    def embed_single(self, text: str) -> list[float]:
+        """Embed one text string and return its vector."""
+        return self.embed_batch([text])[0]

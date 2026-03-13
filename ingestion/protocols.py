@@ -38,3 +38,7 @@ class EmbedderProtocol(Protocol):
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Embed a list of texts. Returns one vector per input text."""
         ...
+
+    def embed_single(self, text: str) -> list[float]:
+        """Embed one text string and return its vector."""
+        ...
