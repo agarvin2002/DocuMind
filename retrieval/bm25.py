@@ -71,6 +71,33 @@ class BM25Index:
         payload = pickle.loads(data)  # noqa: S301 — only called with trusted internal bytes
         return cls(payload["index"], payload["corpus"])
 
+    def search(self, query_text: str, k: int) -> list[tuple[int, float]]:
+        """
+        Return the top-k matching corpus positions and their BM25 scores.
+
+        Args:
+            query_text: The search query string.
+            k: Maximum number of results to return.
+
+        Returns:
+            List of (corpus_position, score) pairs sorted by score descending.
+            corpus_position == chunk_index of the matching DocumentChunk.
+            Chunks with a score of exactly 0.0 (no query term present) are excluded.
+            Negative scores (high-frequency term epsilon floor) are kept.
+        """
+        if not query_text.strip():
+            return []
+
+        tokens = _tokenize(query_text)
+        raw_scores: list[float] = self._index.get_scores(tokens).tolist()
+
+        # Drop exactly-zero scores — no query term appeared in those chunks.
+        # Keep negative scores — BM25Okapi floors high-frequency term IDF to
+        # epsilon * average_idf, which can be negative. Those chunks still matched.
+        scored = [(pos, score) for pos, score in enumerate(raw_scores) if score != 0.0]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:k]
+
     @property
     def corpus_size(self) -> int:
         """Number of documents (chunks) in the index."""
