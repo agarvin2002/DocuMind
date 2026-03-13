@@ -8,11 +8,14 @@ Usage:
 import logging
 import uuid
 
+import redis as redis_lib
+from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
 from documents.exceptions import DocumentUploadError
 from documents.models import Document, DocumentChunk
 from ingestion.chunkers import ChunkData
+from retrieval.bm25 import BM25Index
 
 logger = logging.getLogger(__name__)
 
@@ -158,3 +161,36 @@ def save_document_chunks(
         "Document chunks saved",
         extra={"document_id": str(document_id), "chunk_count": len(chunk_objects)},
     )
+
+
+def save_bm25_index(document_id: uuid.UUID, bm25_index: BM25Index) -> None:
+    """
+    Persist a document's BM25 index to Redis with a 7-day TTL.
+
+    Non-fatal on RedisError — keyword search falls back to rebuilding from the DB.
+    A warning is logged so the gap is visible in monitoring.
+
+    Redis key: documind:bm25:{document_id}
+    TTL: 604800 seconds (7 days)
+    """
+    redis_key = f"documind:bm25:{document_id}"
+    r = None
+    try:
+        r = redis_lib.from_url(
+            settings.REDIS_URL,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        r.setex(redis_key, 604800, bm25_index.serialize())
+        logger.info(
+            "BM25 index saved to Redis",
+            extra={"document_id": str(document_id)},
+        )
+    except redis_lib.RedisError as e:
+        logger.warning(
+            "Failed to save BM25 index to Redis — keyword search will rebuild on first query",
+            extra={"document_id": str(document_id), "error_type": type(e).__name__},
+        )
+    finally:
+        if r is not None:
+            r.close()
