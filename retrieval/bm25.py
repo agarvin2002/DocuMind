@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 def _tokenize(text: str) -> list[str]:
     # Simple whitespace tokenisation — lowercase + split.
-    # More sophisticated tokenisation (stopwords, stemming) deferred to Phase 3
-    # where it can be benchmarked against retrieval quality metrics.
+    # Stopwords and stemming are deferred pending retrieval quality benchmarks.
     return text.lower().split()
 
 

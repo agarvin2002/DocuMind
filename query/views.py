@@ -18,8 +18,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from documents.exceptions import DocumentNotFoundError
+from query.exceptions import NoRelevantChunksError
 from query.serializers import ChunkResultSerializer, SearchRequestSerializer
-from query.services import NoRelevantChunksError, execute_search
+from query.services import execute_search
+from retrieval.reranker import RerankerError
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,9 @@ class SearchView(APIView):
             return Response({"detail": str(e)}, status=e.http_status_code)
         except NoRelevantChunksError as e:
             return Response({"detail": str(e)}, status=e.http_status_code)
+        except RerankerError as e:
+            logger.error("Reranker failed during search", extra={"error_type": type(e).__name__})
+            return Response({"detail": "Search ranking failed. Please try again."}, status=500)
 
         # Step 4: return the response.
         return Response(

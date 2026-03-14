@@ -1,3 +1,10 @@
+"""
+retrieval/protocols.py — Port interfaces for all retrieval dependencies.
+
+Defines structural Protocols so RetrievalPipeline depends on abstractions,
+not on Django, Redis, or any specific model library.
+"""
+
 import uuid
 from typing import Protocol
 

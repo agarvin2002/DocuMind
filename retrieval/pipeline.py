@@ -26,6 +26,7 @@ Usage:
 
 import logging
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 from retrieval.hybrid import HybridFusion
 from retrieval.protocols import (
@@ -89,22 +90,22 @@ class RetrievalPipeline:
             extra={"document_id": str(document_id), "k": k, "candidates_k": candidates_k},
         )
 
-        # Step 1: embed the query into a vector.
         embedding = self._embedder.embed_single(query)
 
-        # Step 2: semantic vector search.
-        vector_results = self._vector_store.search(embedding, document_id, candidates_k)
+        # Vector search (pgvector DB round-trip) and keyword search (Redis + BM25) are
+        # independent — run them concurrently to cut wall-clock latency by ~50–150ms.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            vector_future = executor.submit(
+                self._vector_store.search, embedding, document_id, candidates_k
+            )
+            keyword_future = executor.submit(
+                self._keyword_search_fn, query, document_id, candidates_k
+            )
+            vector_results = vector_future.result()
+            keyword_results = keyword_future.result()
 
-        # Step 3: BM25 keyword search.
-        keyword_results = self._keyword_search_fn(query, document_id, candidates_k)
-
-        # Step 4: merge both lists using Reciprocal Rank Fusion.
         fused_results = self._fusion.fuse(vector_results, keyword_results)
-
-        # Step 5: re-rank the fused shortlist with the cross-encoder.
         reranked_results = self._reranker.rerank(query, fused_results)
-
-        # Step 6: return the final top-k.
         final_results = reranked_results[:k]
 
         logger.info(

@@ -90,7 +90,7 @@ class SentenceTransformerEmbedder:
         self._load_model()
 
         try:
-            # convert_to_numpy=False returns pytorch tensors; .tolist() converts
+            # convert_to_numpy=True returns numpy arrays; .tolist() converts
             # them to plain Python lists so no numpy dependency leaks to callers.
             embeddings = self._model.encode(texts, convert_to_numpy=True)
             result: list[list[float]] = [vec.tolist() for vec in embeddings]

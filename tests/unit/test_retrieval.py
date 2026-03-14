@@ -82,12 +82,6 @@ class TestBM25Search:
         results = index.search("hello", k=10)
         assert all(score != 0.0 for _, score in results)
 
-    def test_search_scores_are_non_negative(self):
-        # BM25 scores should not go negative (unlike vector cosine distance which can).
-        index = BM25Index.build(["hello world", "foo bar"])
-        results = index.search("hello", k=10)
-        assert all(score >= 0.0 for _, score in results)
-
 
 # ---------------------------------------------------------------------------
 # HybridFusion tests

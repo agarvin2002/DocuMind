@@ -1,3 +1,10 @@
+"""
+retrieval/schemas.py — Shared data transfer object for retrieval results.
+
+ChunkSearchResult flows through every retrieval component (vector, keyword,
+hybrid fusion, reranker) as the universal result type.
+"""
+
 from dataclasses import dataclass
 
 
