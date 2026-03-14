@@ -1,3 +1,7 @@
+from django.urls import path
 
-# Query API routes — will be filled in during Phase 3/4
-urlpatterns = []
+from query.views import SearchView
+
+urlpatterns = [
+    path("query/search/", SearchView.as_view(), name="query-search"),
+]

@@ -16,6 +16,7 @@ from documents.services import (
     mark_document_failed,
     mark_document_processing,
     mark_document_ready,
+    save_bm25_index,
     save_document_chunks,
 )
 
@@ -60,6 +61,7 @@ def ingest_document(self, document_id_str: str) -> None:
             )
 
         save_document_chunks(document_id, result.chunks, result.embeddings)
+        save_bm25_index(document_id, result.bm25_index)
         mark_document_ready(document_id, result.chunk_count)
         logger.info(
             "Ingestion task complete",
