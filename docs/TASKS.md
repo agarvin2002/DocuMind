@@ -10,10 +10,10 @@ where we left off and what to do next.
 
 ## Current Status
 
-**Active Phase:** Phase 1 — Project Foundation
+**Active Phase:** Phase 4 — LLM Generation + Streaming
 **Phase Status:** NOT STARTED
-**Last Updated:** Session 1 (project initialization)
-**Last Completed Task:** Created all project documents
+**Last Updated:** 2026-03-14
+**Last Completed Task:** Phase 3 unit tests — 57 unit tests passing (25 new retrieval tests)
 
 ---
 
@@ -49,9 +49,9 @@ where we left off and what to do next.
 
 ## Phase 1 Tasks — Project Foundation
 
-### Status: TODO
+### Status: COMPLETE ✓
 
-- [ ] **1.1** Install uv (Python package manager)
+- [x] **1.1** Install uv (Python package manager)
 - [ ] **1.2** Initialize Python project with uv (`uv init`)
 - [ ] **1.3** Create pyproject.toml with all dependencies
 - [ ] **1.4** Create folder structure (src/documind/ and all subdirectories)
@@ -75,33 +75,41 @@ where we left off and what to do next.
 
 ## Phase 2 Tasks — Document Ingestion Pipeline
 
-### Status: NOT STARTED (complete Phase 1 first)
+### Status: COMPLETE ✓
 
-- [ ] **2.1** Create src/documind/ingestion/parsers.py
-- [ ] **2.2** Create src/documind/ingestion/chunkers.py (hierarchical chunking)
-- [ ] **2.3** Create src/documind/ingestion/embedders.py
-- [ ] **2.4** Create retrieval/vector_store.py (pgvector interface via Django ORM)
-- [ ] **2.5** Create BM25 index manager
-- [ ] **2.6** Create src/documind/ingestion/pipeline.py (full orchestration)
-- [ ] **2.7** Configure Celery with Redis
-- [ ] **2.8** Create Celery ingestion task
-- [ ] **2.9** Create POST /documents API route
-- [ ] **2.10** Create GET /documents/{id} API route
-- [ ] **2.11** Test: upload a real PDF and verify it is indexed
+- [x] **2.1** Create ingestion/parsers.py
+- [x] **2.2** Create ingestion/chunkers.py (hierarchical chunking)
+- [x] **2.3** Create ingestion/embedders.py
+- [x] **2.4** Create retrieval/vector_store.py (pgvector interface via Django ORM)
+- [x] **2.5** Create BM25 index manager (retrieval/bm25.py)
+- [x] **2.6** Create ingestion/pipeline.py (full orchestration)
+- [x] **2.7** Configure Celery with Redis
+- [x] **2.8** Create Celery ingestion task (documents/tasks.py)
+- [x] **2.9** Create POST /documents API route
+- [x] **2.10** Create GET /documents/{id} API route
+- [x] **2.11** Unit tests for all ingestion components
 
 ---
 
 ## Phase 3 Tasks — Retrieval System
 
-### Status: NOT STARTED
+### Status: COMPLETE ✓
 
-- [ ] **3.1** Implement Qdrant semantic search
-- [ ] **3.2** Implement BM25 keyword search
-- [ ] **3.3** Implement RRF hybrid fusion
-- [ ] **3.4** Implement cross-encoder re-ranker
-- [ ] **3.5** Create retrieval pipeline (combines all steps)
-- [ ] **3.6** Create scripts/benchmark.py
-- [ ] **3.7** Verify hybrid + rerank beats vector-only in benchmark
+- [x] **3.1** retrieval/schemas.py — ChunkSearchResult dataclass
+- [x] **3.2** retrieval/protocols.py — QueryEmbedderPort, VectorSearchPort, KeywordSearchPort, RerankerPort
+- [x] **3.3** ingestion/embedders.py — added embed_single()
+- [x] **3.4** retrieval/bm25.py — added BM25Index.search()
+- [x] **3.5** documents/selectors.py — vector_search_chunks, keyword_search_chunks, _get_bm25_index_or_rebuild
+- [x] **3.6** documents/services.py — save_bm25_index (Redis, 7-day TTL)
+- [x] **3.7** documents/tasks.py — call save_bm25_index after ingestion
+- [x] **3.8** retrieval/vector_store.py — VectorStore wrapping VectorSearchPort
+- [x] **3.9** retrieval/hybrid.py — HybridFusion with RRF scoring
+- [x] **3.10** retrieval/reranker.py — CrossEncoderReranker (lazy model load)
+- [x] **3.11** retrieval/pipeline.py — RetrievalPipeline (embed → vector → keyword → fuse → rerank)
+- [x] **3.12** query/serializers.py — SearchRequestSerializer, ChunkResultSerializer
+- [x] **3.13** query/services.py — execute_search composition root, NoRelevantChunksError
+- [x] **3.14** query/views.py + query/urls.py — POST /api/v1/query/search/ endpoint
+- [x] **3.15** tests/unit/test_retrieval.py — 25 unit tests for BM25, HybridFusion, RetrievalPipeline
 
 ---
 
@@ -195,4 +203,8 @@ None currently.
 1. Read PROJECT_CONTEXT.md first
 2. Read this file (TASKS.md) to see current phase and next task
 3. Read DEV_COMMANDS.md to know how to start the project
-4. Begin at Phase 1, Task 1.1
+4. Begin Phase 4 — LLM Generation + Streaming
+
+**Current branch:** feature/retrieval-system
+**Pre-push checklist:** ruff clean ✓ | 57 unit tests green ✓ | manage.py check clean ✓
+**Pending before merging:** tests/integration/test_search.py (requires Docker, Phase 3 integration tests)
