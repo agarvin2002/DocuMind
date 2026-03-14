@@ -86,7 +86,7 @@ def vector_search_chunks(
                 child_text=row.child_text,
                 parent_text=row.parent_text,
                 page_number=row.page_number,
-                score=1.0 - float(row.distance),
+                score=max(0.0, 1.0 - float(row.distance)),
             )
         )
 
@@ -157,13 +157,13 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
     """
     Load the BM25 index for a document from Redis, rebuilding from DB if missing.
 
-    Redis key: documind:bm25:{document_id}
+    Redis key: documind:bm25:v1:{document_id}
     TTL: 7 days (604800 seconds)
 
     Redis failures are non-fatal — the index is rebuilt from the database and
     the search continues. A warning is logged so the gap is visible in monitoring.
     """
-    redis_key = f"documind:bm25:{document_id}"
+    redis_key = f"documind:bm25:v1:{document_id}"
     r = None
 
     try:
@@ -181,9 +181,7 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
             "Redis unavailable when loading BM25 index — rebuilding from DB",
             extra={"document_id": str(document_id), "error_type": type(e).__name__},
         )
-    finally:
-        if r is not None:
-            r.close()
+        r = None  # Connection is broken — skip write-back attempt below.
 
     # Cache miss or Redis down — rebuild from database.
     logger.info("Rebuilding BM25 index from DB", extra={"document_id": str(document_id)})
@@ -192,25 +190,18 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
         .order_by("chunk_index")
         .values_list("child_text", flat=True)
     )
-    texts = list(chunks)
-    bm25_index = BM25Index.build(texts)
+    bm25_index = BM25Index.build(list(chunks))
 
-    # Persist back to Redis so next search is fast. Non-fatal if this fails.
-    r = None
-    try:
-        r = redis_lib.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-        r.setex(redis_key, 604800, bm25_index.serialize())
-    except redis_lib.RedisError as e:
-        logger.warning(
-            "Failed to cache rebuilt BM25 index in Redis",
-            extra={"document_id": str(document_id), "error_type": type(e).__name__},
-        )
-    finally:
-        if r is not None:
+    # Persist back to Redis using the existing connection if it is still alive.
+    if r is not None:
+        try:
+            r.setex(redis_key, 604800, bm25_index.serialize())
+        except redis_lib.RedisError as e:
+            logger.warning(
+                "Failed to cache rebuilt BM25 index in Redis",
+                extra={"document_id": str(document_id), "error_type": type(e).__name__},
+            )
+        finally:
             r.close()
 
     return bm25_index

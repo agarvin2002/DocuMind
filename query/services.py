@@ -22,6 +22,29 @@ from retrieval.schemas import ChunkSearchResult
 
 logger = logging.getLogger(__name__)
 
+# Module-level lazy singletons — models are loaded once per process, not per request.
+# Both use local imports inside the getter to avoid circular import chains at module load time.
+_embedder = None
+_reranker = None
+
+
+def _get_embedder():
+    global _embedder
+    if _embedder is None:
+        from ingestion.embedders import SentenceTransformerEmbedder
+
+        _embedder = SentenceTransformerEmbedder()
+    return _embedder
+
+
+def _get_reranker():
+    global _reranker
+    if _reranker is None:
+        from retrieval.reranker import CrossEncoderReranker
+
+        _reranker = CrossEncoderReranker()
+    return _reranker
+
 
 class NoRelevantChunksError(DocuMindError):
     """Raised when the retrieval pipeline returns no results for a query."""
@@ -58,18 +81,16 @@ def execute_search(
         keyword_search_chunks,
         vector_search_chunks,
     )
-    from ingestion.embedders import SentenceTransformerEmbedder
     from retrieval.pipeline import RetrievalPipeline
-    from retrieval.reranker import CrossEncoderReranker
 
     # Validate the document exists before running the expensive pipeline.
     get_document_by_id(document_id)  # raises DocumentNotFoundError if missing
 
     pipeline = RetrievalPipeline(
-        embedder=SentenceTransformerEmbedder(),
+        embedder=_get_embedder(),
         vector_search_fn=vector_search_chunks,
         keyword_search_fn=keyword_search_chunks,
-        reranker=CrossEncoderReranker(),
+        reranker=_get_reranker(),
     )
 
     results = pipeline.run(query=query, document_id=document_id, k=k)

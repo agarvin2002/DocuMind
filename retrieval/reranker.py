@@ -91,6 +91,11 @@ class CrossEncoderReranker:
         except Exception as e:  # noqa: BLE001
             raise RerankerError(f"Cross-encoder scoring failed: {e}") from e
 
+        if len(scores) != len(candidates):
+            raise RerankerError(
+                f"Cross-encoder returned {len(scores)} scores for {len(candidates)} candidates"
+            )
+
         reranked = [
             replace(result, score=score)
             for result, score in zip(candidates, scores)

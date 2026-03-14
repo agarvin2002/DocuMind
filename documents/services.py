@@ -170,10 +170,10 @@ def save_bm25_index(document_id: uuid.UUID, bm25_index: BM25Index) -> None:
     Non-fatal on RedisError — keyword search falls back to rebuilding from the DB.
     A warning is logged so the gap is visible in monitoring.
 
-    Redis key: documind:bm25:{document_id}
+    Redis key: documind:bm25:v1:{document_id}
     TTL: 604800 seconds (7 days)
     """
-    redis_key = f"documind:bm25:{document_id}"
+    redis_key = f"documind:bm25:v1:{document_id}"
     r = None
     try:
         r = redis_lib.from_url(

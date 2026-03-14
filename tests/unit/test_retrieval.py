@@ -82,6 +82,12 @@ class TestBM25Search:
         results = index.search("hello", k=10)
         assert all(score != 0.0 for _, score in results)
 
+    def test_search_scores_are_non_negative(self):
+        # BM25 scores should not go negative (unlike vector cosine distance which can).
+        index = BM25Index.build(["hello world", "foo bar"])
+        results = index.search("hello", k=10)
+        assert all(score >= 0.0 for _, score in results)
+
 
 # ---------------------------------------------------------------------------
 # HybridFusion tests
@@ -269,3 +275,25 @@ class TestRetrievalPipeline:
         candidate_ids = {r.chunk_id for r in candidates}
         assert "chunk-v" in candidate_ids
         assert "chunk-k" in candidate_ids
+
+
+# ---------------------------------------------------------------------------
+# CrossEncoderReranker tests
+# ---------------------------------------------------------------------------
+
+
+class TestCrossEncoderReranker:
+    def test_score_count_mismatch_raises_reranker_error(self):
+        import pytest
+
+        from retrieval.reranker import CrossEncoderReranker, RerankerError
+
+        reranker = CrossEncoderReranker()
+        mock_model = MagicMock()
+        # predict() returns 1 score for 2 candidates — length mismatch.
+        mock_model.predict.return_value = MagicMock(tolist=lambda: [0.9])
+        reranker._model = mock_model
+
+        candidates = [_make_result("a"), _make_result("b")]
+        with pytest.raises(RerankerError):
+            reranker.rerank(query="test", candidates=candidates)
