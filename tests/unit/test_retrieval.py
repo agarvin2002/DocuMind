@@ -6,12 +6,9 @@ No database or Docker required — all external calls are mocked or faked inline
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
-
 from retrieval.bm25 import BM25Index
 from retrieval.hybrid import HybridFusion
 from retrieval.schemas import ChunkSearchResult
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
