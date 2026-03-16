@@ -144,9 +144,8 @@ class OpenAIProvider:
                 timeout=timeout,
             )
             for chunk in response:
-                token = chunk.choices[0].delta.content
-                if token:
-                    yield token
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
         except openai.RateLimitError as exc:
             raise AnswerGenerationError(f"OpenAI rate limit exceeded: {exc}") from exc
         except openai.BadRequestError as exc:
@@ -453,9 +452,8 @@ class OllamaProvider:
                 timeout=timeout,
             )
             for chunk in response:
-                token = chunk.choices[0].delta.content
-                if token:
-                    yield token
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
         except ConnectionError as exc:
             raise AnswerGenerationError(
                 f"Local Ollama is not running at {self._base_url}. "

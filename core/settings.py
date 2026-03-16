@@ -167,10 +167,15 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379")
+
+# ---------------------------------------------------------------------------
 # Celery
 # ---------------------------------------------------------------------------
-CELERY_BROKER_URL = env("REDIS_URL", default="redis://localhost:6379")
-CELERY_RESULT_BACKEND = env("REDIS_URL", default="redis://localhost:6379")
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]

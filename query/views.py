@@ -85,15 +85,7 @@ class AskView(APIView):
         data: [{...}, ...]     ← JSON array of Citation objects, sent once
         event: done
         data: [DONE]           ← signals the client to close the connection
-
-    renderer_classes = [] bypasses DRF's response buffering for this view only.
-    All other views keep normal DRF rendering.
     """
-
-    # Bypass DRF content negotiation — StreamingHttpResponse handles its own headers.
-    # Without this, DRF buffers the entire response before sending, defeating SSE.
-    renderer_classes: list = []
-
     def post(self, request: Request) -> StreamingHttpResponse | Response:
         # Step 1: validate the request body.
         serializer = AskRequestSerializer(data=request.data)
