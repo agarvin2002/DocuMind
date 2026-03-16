@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from generation.constants import CHARS_PER_TOKEN
 from retrieval.schemas import ChunkSearchResult
 
 PROMPT_VERSION = "v1"
@@ -23,16 +24,16 @@ def get_system_prompt(version: str = PROMPT_VERSION) -> str:
 
 
 def estimate_token_count(text: str) -> int:
-    """Rough token estimate: chars / 4. Dependency-free."""
-    return len(text) // 4
+    """Rough token estimate: chars / CHARS_PER_TOKEN. Dependency-free."""
+    return len(text) // CHARS_PER_TOKEN
 
 
 def build_context_block(chunks: list[ChunkSearchResult]) -> str:
     """
     Format retrieved chunks as a numbered excerpt list for the LLM.
 
-    Uses parent_text (512 tokens of rich context) — NOT child_text.
-    child_text is only for retrieval scoring; parent_text is what the LLM reasons over.
+    Uses parent_text (the larger context window chunk) — NOT child_text.
+    child_text is used only for retrieval scoring; parent_text is what the LLM reasons over.
 
     Output format:
         [1]

@@ -5,11 +5,12 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from generation.llm import LLMProviderPort
     from generation.schemas import Citation
 
 
 def stream_answer_tokens(
-    llm_client: object,
+    llm_client: LLMProviderPort,
     system_prompt: str,
     user_message: str,
     *,
@@ -25,13 +26,22 @@ def stream_answer_tokens(
 
     Raises AnswerGenerationError if the provider fails.
     """
-    yield from llm_client.stream(
-        system_prompt=system_prompt,
-        user_message=user_message,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
-    )
+    from generation.llm import AnswerGenerationError
+
+    try:
+        yield from llm_client.stream(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
+    except AnswerGenerationError:
+        raise  # already the right type — let caller handle
+    except Exception as exc:
+        raise AnswerGenerationError(
+            f"Unexpected stream error: {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def build_sse_token_event(token: str) -> str:
