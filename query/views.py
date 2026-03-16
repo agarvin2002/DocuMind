@@ -13,14 +13,19 @@ All business logic lives in query/services.py.
 
 import logging
 
+from django.http import StreamingHttpResponse
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from documents.exceptions import DocumentNotFoundError
-from query.exceptions import NoRelevantChunksError
-from query.serializers import ChunkResultSerializer, SearchRequestSerializer
-from query.services import execute_search
+from query.exceptions import ModelNotAvailableError, NoRelevantChunksError
+from query.serializers import (
+    AskRequestSerializer,
+    ChunkResultSerializer,
+    SearchRequestSerializer,
+)
+from query.services import execute_ask, execute_search
 from retrieval.reranker import RerankerError
 
 logger = logging.getLogger(__name__)
@@ -65,3 +70,70 @@ class SearchView(APIView):
             },
             status=200,
         )
+
+
+class AskView(APIView):
+    """
+    POST /api/v1/query/ask/
+
+    Accepts a query, document ID, optional k and model, then streams a
+    grounded LLM answer back as Server-Sent Events (SSE).
+
+    SSE event sequence:
+        data: <token>          ← one per token, repeated until answer is complete
+        event: citations
+        data: [{...}, ...]     ← JSON array of Citation objects, sent once
+        event: done
+        data: [DONE]           ← signals the client to close the connection
+
+    renderer_classes = [] bypasses DRF's response buffering for this view only.
+    All other views keep normal DRF rendering.
+    """
+
+    # Bypass DRF content negotiation — StreamingHttpResponse handles its own headers.
+    # Without this, DRF buffers the entire response before sending, defeating SSE.
+    renderer_classes: list = []
+
+    def post(self, request: Request) -> StreamingHttpResponse | Response:
+        # Step 1: validate the request body.
+        serializer = AskRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        query = serializer.validated_data["query"]
+        document_id = serializer.validated_data["document_id"]
+        k = serializer.validated_data["k"]
+        model = serializer.validated_data["model"]
+
+        logger.info(
+            "Ask request received",
+            extra={"document_id": str(document_id), "k": k, "model": model or "fallback"},
+        )
+
+        # Step 2 & 3: initialise the generator, catch pre-stream errors.
+        # These errors are raised before any token is yielded — normal HTTP responses.
+        try:
+            event_stream = execute_ask(
+                query=query,
+                document_id=document_id,
+                k=k,
+                model=model,
+            )
+        except DocumentNotFoundError as e:
+            return Response({"detail": str(e)}, status=e.http_status_code)
+        except ModelNotAvailableError as e:
+            return Response({"detail": str(e)}, status=e.http_status_code)
+        except NoRelevantChunksError as e:
+            return Response({"detail": str(e)}, status=e.http_status_code)
+
+        # Step 4: stream the response.
+        response = StreamingHttpResponse(
+            streaming_content=event_stream,
+            content_type="text/event-stream",
+        )
+        # Tell clients and proxies not to cache or buffer the stream.
+        response["Cache-Control"] = "no-cache"
+        # Tell nginx not to buffer — without this, nginx holds the entire stream
+        # in memory before forwarding it, defeating SSE completely.
+        response["X-Accel-Buffering"] = "no"
+        return response
