@@ -5,7 +5,6 @@ No database, no Docker, no real API keys — all external calls are faked or moc
 
 import json
 import uuid
-from collections.abc import Iterator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,6 +24,7 @@ from generation.streaming import (
     build_sse_token_event,
 )
 from retrieval.schemas import ChunkSearchResult
+from tests.fakes import FakeLLMProvider
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -48,57 +48,6 @@ def _make_chunk(
         page_number=page_number,
         score=score,
     )
-
-
-def _make_answer(answer: str = "The answer is 42.") -> GeneratedAnswer:
-    return GeneratedAnswer(
-        answer=answer,
-        citations=[],
-        model_used="fake-model",
-        prompt_version="v1",
-        input_token_count=10,
-        output_token_count=5,
-    )
-
-
-class FakeLLMProvider:
-    """
-    A test double that satisfies LLMProviderPort.
-    Pass tokens= for a successful stream, should_fail=True to raise on every call.
-    """
-
-    def __init__(self, tokens: list[str] | None = None, should_fail: bool = False) -> None:
-        self._tokens = tokens or ["Hello", " world"]
-        self._should_fail = should_fail
-        self.call_count = 0
-
-    def complete(
-        self,
-        system_prompt: str,
-        user_message: str,
-        *,
-        temperature: float,
-        max_tokens: int,
-        timeout: float,
-    ) -> GeneratedAnswer:
-        self.call_count += 1
-        if self._should_fail:
-            raise AnswerGenerationError("fake provider failure")
-        return _make_answer()
-
-    def stream(
-        self,
-        system_prompt: str,
-        user_message: str,
-        *,
-        temperature: float,
-        max_tokens: int,
-        timeout: float,
-    ) -> Iterator[str]:
-        self.call_count += 1
-        if self._should_fail:
-            raise AnswerGenerationError("fake provider failure")
-        yield from self._tokens
 
 
 # ---------------------------------------------------------------------------
@@ -227,14 +176,6 @@ class TestSSEFormatting:
 
 
 class TestFallbackLLMClient:
-    def test_uses_first_provider_on_success(self):
-        p1 = FakeLLMProvider(should_fail=False)
-        p2 = FakeLLMProvider(should_fail=False)
-        client = FallbackLLMClient(providers=[p1, p2])
-        client.complete("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
-        assert p1.call_count == 1
-        assert p2.call_count == 0
-
     def test_stream_uses_first_provider_on_success(self):
         p1 = FakeLLMProvider(tokens=["a", "b"])
         p2 = FakeLLMProvider(tokens=["c"])
@@ -243,37 +184,30 @@ class TestFallbackLLMClient:
         assert tokens == ["a", "b"]
         assert p2.call_count == 0
 
-    def test_falls_back_to_second_on_first_failure(self):
-        p1 = FakeLLMProvider(should_fail=True)
-        p2 = FakeLLMProvider(should_fail=False)
-        client = FallbackLLMClient(providers=[p1, p2])
-        result = client.complete("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
-        assert p1.call_count == 1
-        assert p2.call_count == 1
-        assert isinstance(result, GeneratedAnswer)
-
-    def test_falls_back_to_third_on_first_two_failures(self):
-        p1 = FakeLLMProvider(should_fail=True)
-        p2 = FakeLLMProvider(should_fail=True)
-        p3 = FakeLLMProvider(should_fail=False)  # Ollama as 3rd
-        client = FallbackLLMClient(providers=[p1, p2, p3])
-        result = client.complete("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
-        assert p3.call_count == 1
-        assert isinstance(result, GeneratedAnswer)
-
-    def test_stream_falls_back_through_chain(self):
+    def test_stream_falls_back_to_second_on_first_failure(self):
         p1 = FakeLLMProvider(should_fail=True)
         p2 = FakeLLMProvider(tokens=["fallback", " token"])
         client = FallbackLLMClient(providers=[p1, p2])
         tokens = list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
         assert tokens == ["fallback", " token"]
+        assert p1.call_count == 1
+        assert p2.call_count == 1
 
-    def test_raises_if_all_providers_fail(self):
+    def test_stream_falls_back_through_full_chain(self):
+        p1 = FakeLLMProvider(should_fail=True)
+        p2 = FakeLLMProvider(should_fail=True)
+        p3 = FakeLLMProvider(tokens=["third"])
+        client = FallbackLLMClient(providers=[p1, p2, p3])
+        tokens = list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
+        assert tokens == ["third"]
+        assert p3.call_count == 1
+
+    def test_stream_raises_if_all_providers_fail(self):
         p1 = FakeLLMProvider(should_fail=True)
         p2 = FakeLLMProvider(should_fail=True)
         client = FallbackLLMClient(providers=[p1, p2])
         with pytest.raises(AnswerGenerationError):
-            client.complete("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+            list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
 
     def test_raises_value_error_with_empty_providers(self):
         with pytest.raises(ValueError, match="at least one provider"):
@@ -550,3 +484,111 @@ class TestExecuteAsk:
 
         assert fallback.call_count == 1
         assert any("data: auto" in e for e in events)
+
+
+# ---------------------------------------------------------------------------
+# TestResolveCitations
+# ---------------------------------------------------------------------------
+
+
+class TestResolveCitations:
+    def _resolve(self, answer_text: str, chunks: list) -> list:
+        from query.services import _resolve_citations
+
+        return _resolve_citations(answer_text, chunks)
+
+    def test_duplicate_markers_deduplicated(self):
+        chunk = _make_chunk("c1")
+        citations = self._resolve("See [1] and again [1].", [chunk])
+        assert len(citations) == 1
+        assert citations[0].chunk_id == "c1"
+
+    def test_out_of_range_marker_skipped(self):
+        chunks = [_make_chunk("c1"), _make_chunk("c2"), _make_chunk("c3")]
+        citations = self._resolve("See [5].", chunks)
+        assert citations == []
+
+    def test_zero_marker_skipped(self):
+        chunk = _make_chunk("c1")
+        citations = self._resolve("See [0].", [chunk])
+        assert citations == []
+
+    def test_quote_shorter_than_max_not_truncated(self):
+        chunk = _make_chunk("c1", parent_text="Short text.")
+        citations = self._resolve("[1]", [chunk])
+        assert len(citations) == 1
+        assert citations[0].quote == "Short text."
+
+
+# ---------------------------------------------------------------------------
+# TestExecuteAsk additional tests
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteAskAdditional:
+    def _run(self, **kwargs) -> list[str]:
+        from query.services import execute_ask
+
+        return list(execute_ask(**kwargs))
+
+    def _default_kwargs(self, model=None):
+        return {
+            "query": "What is the main topic?",
+            "document_id": uuid.uuid4(),
+            "k": 5,
+            "model": model,
+        }
+
+    def test_complete_sse_stream_event_order(self):
+        with (
+            patch("documents.selectors.get_document_by_id"),
+            patch("query.services._get_pipeline") as mock_pipeline,
+            patch("query.services._resolve_provider") as mock_resolve,
+        ):
+            mock_pipeline.return_value.run.return_value = [_make_chunk()]
+            mock_resolve.return_value = FakeLLMProvider(tokens=["tok1", "tok2"])
+
+            events = self._run(**self._default_kwargs())
+
+        token_events = [e for e in events if e.startswith("data: ") and "[DONE]" not in e]
+        citations_idx = next(i for i, e in enumerate(events) if "event: citations" in e)
+        done_idx = next(i for i, e in enumerate(events) if "event: done" in e)
+        last_token_idx = max(i for i, e in enumerate(events) if e.startswith("data: ") and "[DONE]" not in e)
+
+        assert len(token_events) == 2
+        assert last_token_idx < citations_idx < done_idx
+
+    def test_accumulated_text_drives_citation_resolution(self):
+        chunk = _make_chunk("c-marker", page_number=2, parent_text="Relevant passage here.")
+        with (
+            patch("documents.selectors.get_document_by_id"),
+            patch("query.services._get_pipeline") as mock_pipeline,
+            patch("query.services._resolve_provider") as mock_resolve,
+        ):
+            mock_pipeline.return_value.run.return_value = [chunk]
+            mock_resolve.return_value = FakeLLMProvider(tokens=["The answer ", "is [1]."])
+
+            events = self._run(**self._default_kwargs())
+
+        citation_event = next(e for e in events if "event: citations" in e)
+        payload = json.loads(citation_event.split("data: ", 1)[1].strip())
+        assert len(payload) == 1
+        assert payload[0]["chunk_id"] == "c-marker"
+
+    def test_citation_dropout_logged_when_markers_present(self, caplog):
+        import logging
+
+        chunk = _make_chunk("c1")
+        with (
+            patch("documents.selectors.get_document_by_id"),
+            patch("query.services._get_pipeline") as mock_pipeline,
+            patch("query.services._resolve_provider") as mock_resolve,
+        ):
+            mock_pipeline.return_value.run.return_value = [chunk]
+            # [5] is out of range (only 1 chunk) — markers present but none resolve
+            mock_resolve.return_value = FakeLLMProvider(tokens=["See [5]."])
+
+            with caplog.at_level(logging.WARNING, logger="query.services"):
+                self._run(**self._default_kwargs())
+
+        assert any("Citation markers" in r.message for r in caplog.records)
