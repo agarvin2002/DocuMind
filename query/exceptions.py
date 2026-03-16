@@ -1,6 +1,6 @@
 """Query app — custom exceptions."""
 
-from core.exceptions import DocuMindError, LLMError
+from core.exceptions import DocuMindError, ValidationError
 
 
 class QueryError(DocuMindError):
@@ -14,6 +14,7 @@ class NoRelevantChunksError(QueryError):
     http_status_code = 404
 
 
-class AnswerGenerationError(LLMError):
-    """Raised when the LLM fails to generate an answer."""
-    default_message = "Failed to generate an answer."
+class ModelNotAvailableError(ValidationError):
+    """Raised when the caller requests a model that is not configured."""
+    default_message = "The requested model is not available."
+    http_status_code = 400

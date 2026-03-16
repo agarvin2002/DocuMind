@@ -7,6 +7,7 @@ from typing import Protocol, runtime_checkable
 import instructor
 from langsmith import traceable
 
+from core.exceptions import LLMError
 from generation.schemas import GeneratedAnswer
 
 logger = logging.getLogger(__name__)
@@ -54,10 +55,10 @@ class LLMProviderPort(Protocol):
 # ---------------------------------------------------------------------------
 
 
-class AnswerGenerationError(Exception):
+class AnswerGenerationError(LLMError):
     """Raised when all LLM providers fail or a single provider errors out."""
 
-    http_status_code = 502
+    default_message = "Failed to generate an answer from any configured LLM provider."
 
 
 # ---------------------------------------------------------------------------
