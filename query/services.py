@@ -20,6 +20,7 @@ Usage:
 import logging
 import re
 import threading
+import time
 import uuid
 from collections.abc import Iterator
 
@@ -254,12 +255,14 @@ def _resolve_citations(answer_text: str, chunks: list[ChunkSearchResult]) -> lis
             continue
         seen.add(idx)
         chunk = chunks[idx]
+        from generation.constants import CITATION_QUOTE_MAX_CHARS
+
         citations.append(
             Citation(
                 chunk_id=str(chunk.chunk_id),
                 document_title=chunk.document_title,
                 page_number=chunk.page_number,
-                quote=chunk.parent_text[:200],  # first 200 chars as the grounding quote
+                quote=chunk.parent_text[:CITATION_QUOTE_MAX_CHARS],
             )
         )
 
@@ -343,22 +346,35 @@ def execute_ask(
 
     # --- Stream phase (errors here → SSE error event, stream already open) ---
     accumulated = ""
+    start_time = time.monotonic()
+    first_token_time: float | None = None
+
     try:
-        for token in stream_answer_tokens(
+        for i, token in enumerate(stream_answer_tokens(
             provider,
             system_prompt,
             user_message,
             temperature=settings.DOCUMIND_LLM_TEMPERATURE,
             max_tokens=settings.DOCUMIND_LLM_MAX_TOKENS,
             timeout=settings.DOCUMIND_LLM_TIMEOUT_SECONDS,
-        ):
+        )):
+            if i == 0:
+                first_token_time = time.monotonic() - start_time
             accumulated += token
             yield build_sse_token_event(token)
 
         citations = _resolve_citations(accumulated, chunks)
+
+        if not citations and re.search(r"\[\d+\]", accumulated):
+            logger.warning(
+                "Citation markers in answer could not be resolved to chunks",
+                extra={"document_id": str(document_id), "chunk_count": len(chunks)},
+            )
+
         yield build_sse_citations_event(citations)
         yield build_sse_done_event()
 
+        total_time = time.monotonic() - start_time
         logger.info(
             "LLM generation complete",
             extra={
@@ -366,6 +382,8 @@ def execute_ask(
                 "provider": type(provider).__name__,
                 "answer_length": len(accumulated),
                 "citation_count": len(citations),
+                "ttft_ms": round(first_token_time * 1000) if first_token_time is not None else None,
+                "total_ms": round(total_time * 1000),
             },
         )
 

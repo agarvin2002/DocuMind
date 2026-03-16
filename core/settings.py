@@ -218,7 +218,7 @@ BEDROCK_AWS_REGION = env("BEDROCK_AWS_REGION", default="us-east-1")
 BEDROCK_MODEL_ID = env("BEDROCK_MODEL_ID", default="anthropic.claude-3-sonnet-20240229-v1:0")
 
 # Ollama — local LLM fallback, no API key needed, runs via Docker Compose
-OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=True)
+OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=False)
 OLLAMA_BASE_URL = env("OLLAMA_BASE_URL", default="http://localhost:11434/v1")
 OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 

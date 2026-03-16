@@ -80,7 +80,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s               # give Ollama time to start before first health check
+      start_period: 30s               # model loading on first start can take 20-30s
 
   # -------------------------------------------------------------------
   # MinIO — fake S3 running locally
