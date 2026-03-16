@@ -167,10 +167,15 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379")
+
+# ---------------------------------------------------------------------------
 # Celery
 # ---------------------------------------------------------------------------
-CELERY_BROKER_URL = env("REDIS_URL", default="redis://localhost:6379")
-CELERY_RESULT_BACKEND = env("REDIS_URL", default="redis://localhost:6379")
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -194,6 +199,46 @@ CELERY_TASK_SEND_SENT_EVENT = True
 # Upload limits
 # ---------------------------------------------------------------------------
 DOCUMIND_MAX_UPLOAD_SIZE_MB = env.int("DOCUMIND_MAX_UPLOAD_SIZE_MB", default=50)
+
+# ---------------------------------------------------------------------------
+# LLM Generation — provider credentials
+# ---------------------------------------------------------------------------
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o")
+
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
+ANTHROPIC_MODEL = env("ANTHROPIC_MODEL", default="claude-sonnet-4-5")
+
+# Bedrock uses separate credentials from the MinIO/S3 storage credentials above.
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY are already used for file storage (MinIO).
+BEDROCK_ENABLED = env.bool("BEDROCK_ENABLED", default=False)
+BEDROCK_AWS_ACCESS_KEY_ID = env("BEDROCK_AWS_ACCESS_KEY_ID", default="")
+BEDROCK_AWS_SECRET_ACCESS_KEY = env("BEDROCK_AWS_SECRET_ACCESS_KEY", default="")
+BEDROCK_AWS_REGION = env("BEDROCK_AWS_REGION", default="us-east-1")
+BEDROCK_MODEL_ID = env("BEDROCK_MODEL_ID", default="anthropic.claude-3-sonnet-20240229-v1:0")
+
+# Ollama — local LLM fallback, no API key needed, runs via Docker Compose
+OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=False)
+OLLAMA_BASE_URL = env("OLLAMA_BASE_URL", default="http://localhost:11434/v1")
+OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
+
+# ---------------------------------------------------------------------------
+# LLM Generation — tuning knobs
+# ---------------------------------------------------------------------------
+# Temperature: 0.0 = deterministic, 1.0 = creative. Low is better for RAG
+# (we want consistent, grounded answers, not creative ones).
+DOCUMIND_LLM_TEMPERATURE = env.float("DOCUMIND_LLM_TEMPERATURE", default=0.1)
+DOCUMIND_LLM_MAX_TOKENS = env.int("DOCUMIND_LLM_MAX_TOKENS", default=1024)
+DOCUMIND_LLM_TIMEOUT_SECONDS = env.float("DOCUMIND_LLM_TIMEOUT_SECONDS", default=30.0)
+# Max tokens of document context sent to the LLM. Chunks are trimmed if over this limit.
+DOCUMIND_MAX_CONTEXT_TOKENS = env.int("DOCUMIND_MAX_CONTEXT_TOKENS", default=6000)
+
+# ---------------------------------------------------------------------------
+# LangSmith — LLM observability (no-op when LANGCHAIN_TRACING_V2=false)
+# ---------------------------------------------------------------------------
+LANGCHAIN_TRACING_V2 = env.bool("LANGCHAIN_TRACING_V2", default=False)
+LANGCHAIN_API_KEY = env("LANGCHAIN_API_KEY", default="")
+LANGCHAIN_PROJECT = env("LANGCHAIN_PROJECT", default="documind")
 
 # ---------------------------------------------------------------------------
 # Security headers
