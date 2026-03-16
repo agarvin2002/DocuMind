@@ -3,7 +3,7 @@ query/serializers.py — Request validation and response shaping for search and 
 
 SearchRequestSerializer validates inbound POST data for /api/v1/query/search/.
 AskRequestSerializer validates inbound POST data for /api/v1/query/ask/.
-SearchResponseSerializer converts ChunkSearchResult dataclass objects into JSON-ready dicts.
+ChunkResultSerializer serializes individual ChunkSearchResult objects for the response body.
 
 Usage:
     serializer = SearchRequestSerializer(data=request.data)
@@ -78,10 +78,3 @@ class AskRequestSerializer(serializers.Serializer):
     )
 
 
-class SearchResponseSerializer(serializers.Serializer):
-    """Shapes the full response body for a successful search."""
-
-    query = serializers.CharField()
-    document_id = serializers.UUIDField()
-    result_count = serializers.IntegerField()
-    results = ChunkResultSerializer(many=True)
