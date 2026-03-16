@@ -10,10 +10,10 @@ where we left off and what to do next.
 
 ## Current Status
 
-**Active Phase:** Phase 4 — LLM Generation + Streaming
+**Active Phase:** Phase 5 — AI Agent Pipeline
 **Phase Status:** NOT STARTED
-**Last Updated:** 2026-03-14
-**Last Completed Task:** Phase 3 unit tests — 57 unit tests passing (25 new retrieval tests)
+**Last Updated:** 2026-03-16
+**Last Completed Task:** Phase 4 complete — 95 unit tests passing (37 new generation tests)
 
 ---
 
@@ -115,15 +115,18 @@ where we left off and what to do next.
 
 ## Phase 4 Tasks — LLM Generation + Streaming
 
-### Status: NOT STARTED
+### Status: COMPLETE ✓
 
-- [ ] **4.1** Create src/documind/generation/llm.py (Claude client)
-- [ ] **4.2** Create src/documind/generation/prompts.py
-- [ ] **4.3** Create src/documind/generation/schemas.py (Instructor models)
-- [ ] **4.4** Create src/documind/generation/streaming.py
-- [ ] **4.5** Set up LangSmith tracing
-- [ ] **4.6** Create POST /query endpoint (streaming)
-- [ ] **4.7** Test: ask a question, get a streaming answer with citations
+- [x] **4.1** generation/schemas.py — Citation + GeneratedAnswer Pydantic models
+- [x] **4.2** generation/prompts.py — versioned system prompt, context window guard
+- [x] **4.3** generation/streaming.py — SSE wire format helpers
+- [x] **4.4** generation/llm.py — OpenAI, Anthropic, Bedrock, Ollama providers + FallbackLLMClient
+- [x] **4.5** core/settings.py + .env.example — LLM settings block (all 4 providers)
+- [x] **4.6** query/services.py — execute_ask(), _get_provider_registry(), _resolve_provider()
+- [x] **4.7** query/serializers.py — AskRequestSerializer (query, document_id, k, model)
+- [x] **4.8** query/views.py + query/urls.py — AskView, POST /api/v1/query/ask/ (SSE streaming)
+- [x] **4.9** docker-compose.yml — Ollama service + ollama_data volume
+- [x] **4.10** tests/unit/test_generation.py — 37 unit tests (95 total passing)
 
 ---
 
@@ -203,8 +206,8 @@ None currently.
 1. Read PROJECT_CONTEXT.md first
 2. Read this file (TASKS.md) to see current phase and next task
 3. Read DEV_COMMANDS.md to know how to start the project
-4. Begin Phase 4 — LLM Generation + Streaming
+4. Begin Phase 5 — AI Agent Pipeline
 
-**Current branch:** feature/retrieval-system
-**Pre-push checklist:** ruff clean ✓ | 57 unit tests green ✓ | manage.py check clean ✓
-**Pending before merging:** tests/integration/test_search.py (requires Docker, Phase 3 integration tests)
+**Current branch:** feature/generation
+**Pre-push checklist:** ruff clean ✓ | 95 unit tests green ✓ | manage.py check clean ✓
+**Next:** Begin Phase 5 — AI Agent Pipeline (LangGraph state machine, multi-hop reasoning)
