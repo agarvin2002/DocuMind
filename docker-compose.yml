@@ -63,6 +63,26 @@ services:
       retries: 5
 
   # -------------------------------------------------------------------
+  # Ollama — local LLM runtime (free, no API key, runs on your machine)
+  # Used as: final fallback when OpenAI / Anthropic / Bedrock are unavailable
+  # Models are stored in the ollama_data volume — persists across restarts.
+  # One-time setup: docker compose exec ollama ollama pull llama3.2
+  # -------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: documind_ollama
+    ports:
+      - "11434:11434"                  # Django (on host) connects at localhost:11434
+    volumes:
+      - ollama_data:/root/.ollama      # downloaded models (~2GB) survive restarts
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s               # give Ollama time to start before first health check
+
+  # -------------------------------------------------------------------
   # MinIO — fake S3 running locally
   # Stores: uploaded PDF files and documents
   # Speaks the exact same language as AWS S3 — swap credentials to go live.
@@ -92,3 +112,4 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  ollama_data:
