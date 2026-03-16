@@ -117,6 +117,9 @@ class AskView(APIView):
             return Response({"detail": str(e)}, status=e.http_status_code)
         except NoRelevantChunksError as e:
             return Response({"detail": str(e)}, status=e.http_status_code)
+        except RerankerError:
+            logger.error("Reranker failed during ask retrieval")
+            return Response({"detail": "Retrieval ranking failed. Please try again."}, status=500)
 
         # Step 4: stream the response.
         response = StreamingHttpResponse(

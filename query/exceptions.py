@@ -1,6 +1,6 @@
 """Query app — custom exceptions."""
 
-from core.exceptions import DocuMindError, ValidationError
+from core.exceptions import DocuMindError
 
 
 class QueryError(DocuMindError):
@@ -14,7 +14,7 @@ class NoRelevantChunksError(QueryError):
     http_status_code = 404
 
 
-class ModelNotAvailableError(ValidationError):
+class ModelNotAvailableError(QueryError):
     """Raised when the caller requests a model that is not configured."""
     default_message = "The requested model is not available."
     http_status_code = 400
