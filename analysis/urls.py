@@ -1,3 +1,8 @@
+from django.urls import path
 
-# Analysis API routes — will be filled in during Phase 5
-urlpatterns = []
+from analysis.views import AnalysisJobCreateView, AnalysisJobDetailView
+
+urlpatterns = [
+    path("analysis/", AnalysisJobCreateView.as_view()),
+    path("analysis/<uuid:job_id>/", AnalysisJobDetailView.as_view()),
+]
