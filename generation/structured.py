@@ -45,9 +45,10 @@ class StructuredLLMClient:
     importing this module never triggers network activity or credential checks.
     """
 
-    def __init__(self, api_key: str, model: str) -> None:
+    def __init__(self, api_key: str, model: str, *, base_url: str | None = None) -> None:
         self._api_key = api_key
         self._model = model
+        self._base_url = base_url  # None = use OpenAI default; set for Ollama/custom endpoints
         self._client = None
 
     def _get_client(self):
@@ -56,14 +57,21 @@ class StructuredLLMClient:
 
         Called once per worker process — subsequent calls return the cached client.
         Same lazy-init pattern as the Redis connection pool in documents/services.py.
+
+        When base_url is set (e.g. Ollama at http://localhost:11434/v1), the OpenAI
+        client points at that endpoint instead of api.openai.com. Instructor works
+        identically — it just sends the structured-output request to a different URL.
         """
         if self._client is None:
             import instructor
             import openai
 
-            self._client = instructor.from_openai(
-                openai.OpenAI(api_key=self._api_key)
+            http_client = (
+                openai.OpenAI(base_url=self._base_url, api_key=self._api_key)
+                if self._base_url
+                else openai.OpenAI(api_key=self._api_key)
             )
+            self._client = instructor.from_openai(http_client)
         return self._client
 
     @traceable(name="structured_llm_complete")

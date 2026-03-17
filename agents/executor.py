@@ -51,15 +51,29 @@ def _build_executor() -> "AgentExecutor":
     """
     Instantiate all agent dependencies and compile the LangGraph graph.
     Called exactly once per worker process.
+
+    Provider selection mirrors query/services.py — Ollama takes priority when
+    OLLAMA_ENABLED=true (local dev / CI without cloud keys). Falls back to
+    OpenAI when running with a real API key in staging/production.
     """
     from agents.query_planner import QueryPlanner
     from agents.tools import GenerationTool, RetrievalTool
+    from generation.constants import OLLAMA_DUMMY_API_KEY
     from generation.structured import StructuredLLMClient
 
-    structured_llm = StructuredLLMClient(
-        api_key=settings.OPENAI_API_KEY,
-        model=settings.OPENAI_MODEL,
-    )
+    if settings.OLLAMA_ENABLED:
+        structured_llm = StructuredLLMClient(
+            api_key=OLLAMA_DUMMY_API_KEY,
+            model=settings.OLLAMA_MODEL,
+            base_url=settings.OLLAMA_BASE_URL,
+        )
+        logger.info("agent_executor_using_ollama", extra={"model": settings.OLLAMA_MODEL})
+    else:
+        structured_llm = StructuredLLMClient(
+            api_key=settings.OPENAI_API_KEY,
+            model=settings.OPENAI_MODEL,
+        )
+        logger.info("agent_executor_using_openai", extra={"model": settings.OPENAI_MODEL})
     planner = QueryPlanner(structured_llm=structured_llm)
     retrieval_tool = RetrievalTool()
     gen_tool = GenerationTool(structured_llm=structured_llm)
