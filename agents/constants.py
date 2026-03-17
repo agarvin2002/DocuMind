@@ -21,8 +21,6 @@ AGENT_SUBQUERY_MAX_TOKENS: int = 800     # per-sub-question answer
 AGENT_PLANNER_TEMPERATURE: float = 0.0
 AGENT_GENERATION_TEMPERATURE: float = 0.1
 
-# Network timeout for structured LLM calls (seconds)
-AGENT_LLM_TIMEOUT: float = 45.0
 
 # Redis cache key prefixes
 AGENT_CLASSIFY_CACHE_PREFIX: str = "documind:agent:classify:v1:"

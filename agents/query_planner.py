@@ -26,7 +26,6 @@ from agents.constants import (
     AGENT_CACHE_TTL,
     AGENT_CLASSIFY_CACHE_PREFIX,
     AGENT_DECOMPOSE_CACHE_PREFIX,
-    AGENT_LLM_TIMEOUT,
     AGENT_PLANNER_TEMPERATURE,
     AGENT_SUB_QUESTION_MAX,
 )
@@ -102,7 +101,7 @@ class QueryPlanner:
                 response_model=ComplexityClassification,
                 temperature=AGENT_PLANNER_TEMPERATURE,
                 max_tokens=200,
-                timeout=AGENT_LLM_TIMEOUT,
+                timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
         except Exception as exc:
             raise PlanningError(f"Query classification failed: {exc}") from exc
@@ -152,7 +151,7 @@ class QueryPlanner:
                 response_model=QueryDecomposition,
                 temperature=AGENT_PLANNER_TEMPERATURE,
                 max_tokens=400,
-                timeout=AGENT_LLM_TIMEOUT,
+                timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
         except Exception as exc:
             raise PlanningError(f"Query decomposition failed: {exc}") from exc

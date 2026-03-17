@@ -230,6 +230,9 @@ OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 DOCUMIND_LLM_TEMPERATURE = env.float("DOCUMIND_LLM_TEMPERATURE", default=0.1)
 DOCUMIND_LLM_MAX_TOKENS = env.int("DOCUMIND_LLM_MAX_TOKENS", default=1024)
 DOCUMIND_LLM_TIMEOUT_SECONDS = env.float("DOCUMIND_LLM_TIMEOUT_SECONDS", default=30.0)
+# Agent pipeline timeout — higher than streaming timeout because agent LLM calls are
+# non-streaming and local Ollama inference can take 60-120s per call on consumer hardware.
+AGENT_LLM_TIMEOUT_SECONDS = env.float("AGENT_LLM_TIMEOUT_SECONDS", default=120.0)
 # Max tokens of document context sent to the LLM. Chunks are trimmed if over this limit.
 DOCUMIND_MAX_CONTEXT_TOKENS = env.int("DOCUMIND_MAX_CONTEXT_TOKENS", default=6000)
 

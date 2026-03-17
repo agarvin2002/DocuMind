@@ -16,9 +16,10 @@ Usage:
 import logging
 import uuid
 
+from django.conf import settings
+
 from agents.constants import (
     AGENT_GENERATION_TEMPERATURE,
-    AGENT_LLM_TIMEOUT,
     AGENT_SUBQUERY_MAX_TOKENS,
     AGENT_SYNTHESIS_MAX_TOKENS,
 )
@@ -126,7 +127,7 @@ class GenerationTool:
                 response_model=SynthesizedAnswer,
                 temperature=AGENT_GENERATION_TEMPERATURE,
                 max_tokens=AGENT_SUBQUERY_MAX_TOKENS,
-                timeout=AGENT_LLM_TIMEOUT,
+                timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
             return result.answer
         except Exception as exc:
@@ -167,7 +168,7 @@ class GenerationTool:
                 response_model=SynthesizedAnswer,
                 temperature=AGENT_GENERATION_TEMPERATURE,
                 max_tokens=AGENT_SYNTHESIS_MAX_TOKENS,
-                timeout=AGENT_LLM_TIMEOUT,
+                timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
             return result.answer
         except Exception as exc:

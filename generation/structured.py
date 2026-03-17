@@ -58,9 +58,16 @@ class StructuredLLMClient:
         Called once per worker process — subsequent calls return the cached client.
         Same lazy-init pattern as the Redis connection pool in documents/services.py.
 
-        When base_url is set (e.g. Ollama at http://localhost:11434/v1), the OpenAI
-        client points at that endpoint instead of api.openai.com. Instructor works
-        identically — it just sends the structured-output request to a different URL.
+        When base_url is set (e.g. Ollama at http://localhost:11434/v1):
+          - The OpenAI client points at that endpoint instead of api.openai.com.
+          - Instructor is patched with Mode.JSON so the LLM outputs a plain JSON
+            object matching the Pydantic schema. This is more reliable on small local
+            models (like llama3.2) than tool-calling mode, which requires the model
+            to correctly invoke a function schema — something 3B models do poorly.
+
+        When base_url is None (OpenAI/Anthropic in staging/production):
+          - Instructor uses its default mode (tool calling + function schemas), which
+            OpenAI's models handle with high accuracy.
         """
         if self._client is None:
             import instructor
@@ -71,7 +78,9 @@ class StructuredLLMClient:
                 if self._base_url
                 else openai.OpenAI(api_key=self._api_key)
             )
-            self._client = instructor.from_openai(http_client)
+            # JSON mode for local/custom endpoints — tool-calling for OpenAI.
+            mode = instructor.Mode.JSON if self._base_url else instructor.Mode.TOOLS
+            self._client = instructor.from_openai(http_client, mode=mode)
         return self._client
 
     @traceable(name="structured_llm_complete")
