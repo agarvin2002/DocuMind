@@ -58,7 +58,7 @@ class SynthesizedAnswer(BaseModel):
     """LLM synthesizes sub-answers (or a direct answer) into a final response."""
 
     answer: str
-    key_points: list[str]
+    key_points: list[str] = []
 
 
 class ContradictionItem(BaseModel):
