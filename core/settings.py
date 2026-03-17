@@ -233,8 +233,10 @@ DOCUMIND_LLM_TEMPERATURE = env.float("DOCUMIND_LLM_TEMPERATURE", default=0.1)
 DOCUMIND_LLM_MAX_TOKENS = env.int("DOCUMIND_LLM_MAX_TOKENS", default=1024)
 DOCUMIND_LLM_TIMEOUT_SECONDS = env.float("DOCUMIND_LLM_TIMEOUT_SECONDS", default=30.0)
 # Agent pipeline timeout — higher than streaming timeout because agent LLM calls are
-# non-streaming and local Ollama inference can take 60-120s per call on consumer hardware.
-AGENT_LLM_TIMEOUT_SECONDS = env.float("AGENT_LLM_TIMEOUT_SECONDS", default=120.0)
+# non-streaming and local Ollama inference can take 60-200s per call on consumer hardware.
+# 800 tokens ÷ 5 tok/s (llama3.2:3b) = 160s per call → 200s gives safe headroom.
+# Production OpenAI: 800 tokens ÷ 200 tok/s = 4s — this limit is never reached.
+AGENT_LLM_TIMEOUT_SECONDS = env.float("AGENT_LLM_TIMEOUT_SECONDS", default=200.0)
 # Max tokens of document context sent to the LLM. Chunks are trimmed if over this limit.
 DOCUMIND_MAX_CONTEXT_TOKENS = env.int("DOCUMIND_MAX_CONTEXT_TOKENS", default=6000)
 
