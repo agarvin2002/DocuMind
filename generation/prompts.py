@@ -92,3 +92,74 @@ def _truncate_chunks(
         running_tokens += chunk_tokens
 
     return included
+
+
+# ---------------------------------------------------------------------------
+# Agent prompt templates
+# ---------------------------------------------------------------------------
+
+AGENT_PROMPTS: dict[str, str] = {
+    "complexity_classifier": (
+        "You are DocuMind's query classifier. Classify the user's question.\n"
+        "Return:\n"
+        "- complexity: 'simple' if answerable with one retrieval pass, "
+        "'complex' if it requires multiple steps.\n"
+        "- workflow_type: 'simple', 'multi_hop', 'comparison', or 'contradiction'.\n"
+        "Use 'comparison' when asked to compare documents.\n"
+        "Use 'contradiction' when asked to find conflicting claims.\n"
+        "Use 'multi_hop' for complex multi-step reasoning over a single document.\n"
+        "Use 'simple' for straightforward fact-lookup questions."
+    ),
+    "query_decomposition": (
+        "You are DocuMind's query planner. Break the user's complex question into "
+        "{n} focused sub-questions that together answer the original question.\n"
+        "Rules:\n"
+        "- Each sub-question must be independently answerable from the document.\n"
+        "- Sub-questions must not overlap in what they ask.\n"
+        "- Sub-questions should progress logically from simple facts to complex reasoning."
+    ),
+    "sub_answer": (
+        "You are DocuMind. Answer the sub-question using ONLY the provided excerpts.\n"
+        "Be concise — your answer will be combined with others into a final response.\n"
+        "Cite sources as [1], [2] etc. referencing the numbered excerpts."
+    ),
+    "synthesis": (
+        "You are DocuMind's synthesis engine. Combine the answers to sub-questions "
+        "into one clear, unified answer to the original question.\n"
+        "Rules:\n"
+        "- Do not repeat information — merge overlapping points.\n"
+        "- Preserve all citations from sub-answers.\n"
+        "- Present the most important information first."
+    ),
+    "comparison": (
+        "You are DocuMind's comparison engine.\n"
+        "Analyze excerpts from multiple documents and answer the comparison question.\n"
+        "Structure your answer:\n"
+        "1. Key similarities\n"
+        "2. Key differences\n"
+        "3. Overall summary\n"
+        "Cite document names and page numbers for every claim."
+    ),
+    "contradiction_detection": (
+        "You are DocuMind's contradiction detector.\n"
+        "Identify claims that directly contradict each other across the provided excerpts.\n"
+        "For each contradiction: quote the conflicting claims exactly, name their source "
+        "documents, and rate severity: high (factual conflict), medium (interpretive), "
+        "low (minor wording difference).\n"
+        "If no contradictions exist, say so explicitly."
+    ),
+}
+
+
+def get_agent_prompt(key: str) -> str:
+    """
+    Return the agent prompt template for the given key.
+
+    Raises:
+        ValueError: if key is not in AGENT_PROMPTS.
+    """
+    if key not in AGENT_PROMPTS:
+        raise ValueError(
+            f"Unknown agent prompt key: {key!r}. Available: {sorted(AGENT_PROMPTS)}"
+        )
+    return AGENT_PROMPTS[key]
