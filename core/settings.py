@@ -184,8 +184,10 @@ CELERY_TIMEZONE = "UTC"
 # A malformed PDF or hung embedding call would otherwise block a worker indefinitely.
 # SOFT_TIME_LIMIT raises SoftTimeLimitExceeded so the task can mark the document FAILED
 # and clean up before TIME_LIMIT force-kills the worker process.
-CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=240)  # 4 min
-CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=300)            # 5 min
+CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=600)  # 10 min
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=720)            # 12 min
+# Default is sized for local Ollama inference (multi-hop = ~7 LLM calls × ~80s each).
+# Production with GPT-4o completes in <30s — override to 300/360 via env var there.
 
 # Prevents slow ingestion tasks from holding prefetched slots hostage.
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1

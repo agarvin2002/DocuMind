@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
     max_retries=0,
     base=BaseDocuMindTask,
     name="analysis.tasks.run_analysis_job",
-    soft_time_limit=300,
-    time_limit=360,
+    # Time limits inherited from CELERY_TASK_SOFT_TIME_LIMIT / CELERY_TASK_TIME_LIMIT
+    # in settings.py (configurable via env vars). Not hardcoded here because agent
+    # runs with local Ollama take much longer than production GPT-4o runs.
 )
 def run_analysis_job(self, job_id_str: str) -> None:
     """
