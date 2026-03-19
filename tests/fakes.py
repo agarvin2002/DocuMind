@@ -68,6 +68,7 @@ class FakeStructuredLLMClient:
         from agents.schemas import (
             ComplexityClassification,
             QueryDecomposition,
+            SimpleAnswer,
             SynthesizedAnswer,
         )
 
@@ -83,6 +84,8 @@ class FakeStructuredLLMClient:
             return QueryDecomposition(
                 sub_questions=["sub q 1", "sub q 2"], reasoning="fake"
             )
+        if response_model is SimpleAnswer:
+            return SimpleAnswer(answer="fake answer")
         if response_model is SynthesizedAnswer:
             return SynthesizedAnswer(answer="fake synthesized answer", key_points=["point 1"])
         # Fallback: try to construct with no args (works for simple models)

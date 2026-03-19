@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agents.schemas import SynthesizedAnswer
+from agents.schemas import SimpleAnswer
 from agents.tools import GenerationTool, RetrievalTool
 from analysis.exceptions import RetrievalAgentError, SynthesisError
 from generation.llm import AnswerGenerationError
@@ -48,7 +48,7 @@ class _FakeLLM:
         self.last_system_prompt = system_prompt
         if self.should_fail:
             raise AnswerGenerationError("fake llm failure")
-        return SynthesizedAnswer(answer=self.answer, key_points=["point"])
+        return SimpleAnswer(answer=self.answer)
 
 
 # ---------------------------------------------------------------------------

@@ -54,8 +54,26 @@ class QueryDecomposition(BaseModel):
     reasoning: str
 
 
+class SimpleAnswer(BaseModel):
+    """Minimal schema for generation nodes that only need a plain text answer.
+
+    Single-field JSON keeps the model's output budget focused on the answer
+    itself — no list fields that cause small local models to generate hundreds
+    of tokens of bullet points.
+
+    Used by: generate_answer() (sub-questions, simple pass-through, comparison)
+    and synthesize() in GenerationTool.
+    """
+
+    answer: str
+
+
 class SynthesizedAnswer(BaseModel):
-    """LLM synthesizes sub-answers (or a direct answer) into a final response."""
+    """LLM synthesizes sub-answers (or a direct answer) into a final response.
+
+    Kept for backward compatibility with tests and future use.
+    Production generation nodes use SimpleAnswer instead.
+    """
 
     answer: str
     key_points: list[str] = []
