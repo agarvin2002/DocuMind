@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import pytest
 
-from agents.schemas import SimpleAnswer
 from agents.tools import GenerationTool, RetrievalTool
 from analysis.exceptions import RetrievalAgentError, SynthesisError
 from generation.llm import AnswerGenerationError
@@ -48,7 +47,15 @@ class _FakeLLM:
         self.last_system_prompt = system_prompt
         if self.should_fail:
             raise AnswerGenerationError("fake llm failure")
-        return SimpleAnswer(answer=self.answer)
+        return response_model()
+
+    def generate_text(self, system_prompt, user_message, *, temperature, max_tokens, timeout):
+        self.call_count += 1
+        self.last_user_message = user_message
+        self.last_system_prompt = system_prompt
+        if self.should_fail:
+            raise AnswerGenerationError("fake llm failure")
+        return self.answer
 
 
 # ---------------------------------------------------------------------------

@@ -24,7 +24,6 @@ from agents.constants import (
     AGENT_SYNTHESIS_MAX_TOKENS,
 )
 from agents.protocols import StructuredLLMPort
-from agents.schemas import SimpleAnswer
 from analysis.exceptions import RetrievalAgentError, SynthesisError
 from generation.prompts import build_context_block, get_agent_prompt
 from retrieval.schemas import ChunkSearchResult
@@ -121,15 +120,13 @@ class GenerationTool:
         user_message = f"Context:\n{context_block}\n\nQuestion: {question}"
 
         try:
-            result: SimpleAnswer = self._llm.complete(
+            return self._llm.generate_text(
                 system_prompt=system_prompt,
                 user_message=user_message,
-                response_model=SimpleAnswer,
                 temperature=AGENT_GENERATION_TEMPERATURE,
                 max_tokens=AGENT_SUBQUERY_MAX_TOKENS,
                 timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
-            return result.answer
         except Exception as exc:
             raise SynthesisError(f"Answer generation failed: {exc}") from exc
 
@@ -162,14 +159,12 @@ class GenerationTool:
         user_message = f"Original question: {original_question}\n\n{sub_qa_block}"
 
         try:
-            result: SimpleAnswer = self._llm.complete(
+            return self._llm.generate_text(
                 system_prompt=get_agent_prompt("synthesis"),
                 user_message=user_message,
-                response_model=SimpleAnswer,
                 temperature=AGENT_GENERATION_TEMPERATURE,
                 max_tokens=AGENT_SYNTHESIS_MAX_TOKENS,
                 timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
-            return result.answer
         except Exception as exc:
             raise SynthesisError(f"Synthesis failed: {exc}") from exc

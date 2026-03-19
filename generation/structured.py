@@ -83,6 +83,47 @@ class StructuredLLMClient:
             self._client = instructor.from_openai(http_client, mode=mode)
         return self._client
 
+    @traceable(name="structured_llm_generate_text")
+    def generate_text(
+        self,
+        system_prompt: str,
+        user_message: str,
+        *,
+        temperature: float,
+        max_tokens: int,
+        timeout: float,
+    ) -> str:
+        """
+        Plain text generation — bypasses Instructor entirely.
+
+        Used by generation nodes (generate_answer, synthesize) that only need
+        a string back. Instructor's JSON mode prompts trigger built-in tool
+        calling on some models (qwen2.5) which corrupts the response.
+        Raw API calls return clean prose that these nodes simply return as-is.
+        """
+        import openai
+
+        raw_client = (
+            openai.OpenAI(base_url=self._base_url, api_key=self._api_key)
+            if self._base_url
+            else openai.OpenAI(api_key=self._api_key)
+        )
+        try:
+            response = raw_client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                timeout=timeout,
+            )
+            return response.choices[0].message.content or ""
+        except Exception as exc:
+            logger.error("structured_llm_generate_text_failed", extra={"model": self._model, "error": str(exc)})
+            raise AnswerGenerationError(str(exc)) from exc
+
     @traceable(name="structured_llm_complete")
     def complete(
         self,
@@ -122,6 +163,7 @@ class StructuredLLMClient:
             result = self._get_client().chat.completions.create(
                 model=self._model,
                 response_model=response_model,
+                max_retries=0,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},

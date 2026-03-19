@@ -19,8 +19,12 @@ AGENT_COMPARISON_K: int = 8     # chunks per document (comparison / contradictio
 #   600 tokens → ~120s + ~20s → ~140s total
 # Both fit within AGENT_LLM_TIMEOUT_SECONDS=200. Production OpenAI is 200 tok/s,
 # so these limits are never approached there.
-AGENT_SYNTHESIS_MAX_TOKENS: int = 600    # final synthesis answer
-AGENT_SUBQUERY_MAX_TOKENS: int = 400     # per-sub-question answer
+AGENT_SYNTHESIS_MAX_TOKENS: int = 1000   # final synthesis answer
+AGENT_SUBQUERY_MAX_TOKENS: int = 1000    # per-sub-question answer
+# Sized so qwen2.5:3b (9 tok/s) finishes naturally without truncation:
+# 1000 tokens ÷ 9 tok/s ≈ 111s generation + ~19s prompt = ~130s total,
+# safely within AGENT_LLM_TIMEOUT_SECONDS=200. Truncation causes Instructor
+# to retry, and retry prompts cause models to hallucinate garbage.
 
 # LLM sampling — 0.0 = deterministic (good for classification/planning)
 AGENT_PLANNER_TEMPERATURE: float = 0.0

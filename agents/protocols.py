@@ -20,7 +20,16 @@ from retrieval.schemas import ChunkSearchResult
 
 class StructuredLLMPort(Protocol):
     """
-    Non-streaming LLM that returns a validated Pydantic model.
+    LLM client for agent-internal steps.
+
+    Two methods:
+    - complete()       — Instructor-backed, returns a validated Pydantic model.
+                        Use for: classify, decompose (need typed multi-field output).
+    - generate_text()  — Raw API call, returns a plain string.
+                        Use for: generate_answer, synthesize (just need text —
+                        Instructor's JSON mode triggers built-in tool calling on
+                        some models like qwen2.5 that corrupts the response).
+
     Satisfied by generation.structured.StructuredLLMClient (real)
     and tests.fakes.FakeStructuredLLMClient (test double).
     """
@@ -35,6 +44,16 @@ class StructuredLLMPort(Protocol):
         max_tokens: int,
         timeout: float,
     ) -> object: ...
+
+    def generate_text(
+        self,
+        system_prompt: str,
+        user_message: str,
+        *,
+        temperature: float,
+        max_tokens: int,
+        timeout: float,
+    ) -> str: ...
 
 
 class QueryPlannerPort(Protocol):

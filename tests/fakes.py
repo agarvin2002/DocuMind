@@ -68,7 +68,6 @@ class FakeStructuredLLMClient:
         from agents.schemas import (
             ComplexityClassification,
             QueryDecomposition,
-            SimpleAnswer,
             SynthesizedAnswer,
         )
 
@@ -84,12 +83,24 @@ class FakeStructuredLLMClient:
             return QueryDecomposition(
                 sub_questions=["sub q 1", "sub q 2"], reasoning="fake"
             )
-        if response_model is SimpleAnswer:
-            return SimpleAnswer(answer="fake answer")
         if response_model is SynthesizedAnswer:
             return SynthesizedAnswer(answer="fake synthesized answer", key_points=["point 1"])
         # Fallback: try to construct with no args (works for simple models)
         return response_model()
+
+    def generate_text(
+        self,
+        system_prompt: str,
+        user_message: str,
+        *,
+        temperature: float,
+        max_tokens: int,
+        timeout: float,
+    ) -> str:
+        self.call_count += 1
+        if self.should_fail:
+            raise AnswerGenerationError("fake structured llm failure")
+        return "fake generated answer"
 
 
 class FakeRetrievalTool:
