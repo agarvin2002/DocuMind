@@ -14,8 +14,13 @@ AGENT_RETRIEVAL_K: int = 5      # chunks per sub-question (multi-hop)
 AGENT_COMPARISON_K: int = 8     # chunks per document (comparison / contradiction)
 
 # LLM generation limits
-AGENT_SYNTHESIS_MAX_TOKENS: int = 1500   # final synthesis answer
-AGENT_SUBQUERY_MAX_TOKENS: int = 800     # per-sub-question answer
+# Sized for local Ollama (llama3.2:3b ≈ 5 tok/s):
+#   400 tokens → ~80s generation + ~20s prompt processing → ~100s total
+#   600 tokens → ~120s + ~20s → ~140s total
+# Both fit within AGENT_LLM_TIMEOUT_SECONDS=200. Production OpenAI is 200 tok/s,
+# so these limits are never approached there.
+AGENT_SYNTHESIS_MAX_TOKENS: int = 600    # final synthesis answer
+AGENT_SUBQUERY_MAX_TOKENS: int = 400     # per-sub-question answer
 
 # LLM sampling — 0.0 = deterministic (good for classification/planning)
 AGENT_PLANNER_TEMPERATURE: float = 0.0
