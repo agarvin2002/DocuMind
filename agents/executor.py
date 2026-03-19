@@ -61,7 +61,7 @@ def _build_executor() -> "AgentExecutor":
     from generation.constants import OLLAMA_DUMMY_API_KEY
     from generation.structured import StructuredLLMClient
 
-    if settings.OLLAMA_ENABLED:
+    if settings.AGENT_LLM_PROVIDER == "ollama":
         structured_llm = StructuredLLMClient(
             api_key=OLLAMA_DUMMY_API_KEY,
             model=settings.OLLAMA_MODEL,

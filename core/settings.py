@@ -224,6 +224,13 @@ OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=False)
 OLLAMA_BASE_URL = env("OLLAMA_BASE_URL", default="http://localhost:11434/v1")
 OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 
+# Agent pipeline provider — selects which LLM the Phase 5 agent uses for
+# structured output (classify, decompose, generate). Valid values: "ollama", "openai".
+# Defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
+# Set to "openai" to use OpenAI even while OLLAMA_ENABLED=true (e.g. running both
+# Phase 4 Ollama + Phase 5 OpenAI in parallel during testing).
+AGENT_LLM_PROVIDER = env("AGENT_LLM_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
+
 # ---------------------------------------------------------------------------
 # LLM Generation — tuning knobs
 # ---------------------------------------------------------------------------
