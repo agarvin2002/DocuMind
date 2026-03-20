@@ -25,7 +25,9 @@ from django.conf import settings
 from agents.constants import (
     AGENT_CACHE_TTL,
     AGENT_CLASSIFY_CACHE_PREFIX,
+    AGENT_CLASSIFY_MAX_TOKENS,
     AGENT_DECOMPOSE_CACHE_PREFIX,
+    AGENT_DECOMPOSE_MAX_TOKENS,
     AGENT_PLANNER_TEMPERATURE,
     AGENT_SUB_QUESTION_MAX,
 )
@@ -85,12 +87,13 @@ class QueryPlanner:
         Raises:
             PlanningError: if the LLM call fails.
         """
-        cache_key = AGENT_CLASSIFY_CACHE_PREFIX + _question_hash(question)
+        q_hash = _question_hash(question)
+        cache_key = AGENT_CLASSIFY_CACHE_PREFIX + q_hash
         cached = self._read_cache(cache_key)
         if cached:
             logger.debug(
                 "agent_classify_cache_hit",
-                extra={"question_hash": _question_hash(question)},
+                extra={"question_hash": q_hash},
             )
             return ComplexityClassification(**cached)
 
@@ -100,7 +103,7 @@ class QueryPlanner:
                 user_message=question,
                 response_model=ComplexityClassification,
                 temperature=AGENT_PLANNER_TEMPERATURE,
-                max_tokens=200,
+                max_tokens=AGENT_CLASSIFY_MAX_TOKENS,
                 timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
         except Exception as exc:
@@ -134,12 +137,13 @@ class QueryPlanner:
         Raises:
             PlanningError: if the LLM call fails.
         """
-        cache_key = AGENT_DECOMPOSE_CACHE_PREFIX + _question_hash(question) + f":{n}"
+        q_hash = _question_hash(question)
+        cache_key = AGENT_DECOMPOSE_CACHE_PREFIX + q_hash + f":{n}"
         cached = self._read_cache(cache_key)
         if cached:
             logger.debug(
                 "agent_decompose_cache_hit",
-                extra={"question_hash": _question_hash(question)},
+                extra={"question_hash": q_hash},
             )
             return QueryDecomposition(**cached)
 
@@ -150,7 +154,7 @@ class QueryPlanner:
                 user_message=question,
                 response_model=QueryDecomposition,
                 temperature=AGENT_PLANNER_TEMPERATURE,
-                max_tokens=400,
+                max_tokens=AGENT_DECOMPOSE_MAX_TOKENS,
                 timeout=settings.AGENT_LLM_TIMEOUT_SECONDS,
             )
         except Exception as exc:

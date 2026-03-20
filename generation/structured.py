@@ -28,6 +28,7 @@ from typing import TypeVar
 
 from langsmith import traceable
 
+from agents.constants import AGENT_STRUCTURED_LLM_MAX_RETRIES
 from generation.llm import AnswerGenerationError
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,8 @@ class StructuredLLMClient:
         self._api_key = api_key
         self._model = model
         self._base_url = base_url  # None = use OpenAI default; set for Ollama/custom endpoints
-        self._client = None
+        self._client = None       # Instructor-patched client (lazy)
+        self._raw_client = None   # Plain OpenAI client for generate_text() (lazy)
 
     def _get_client(self):
         """
@@ -83,6 +85,24 @@ class StructuredLLMClient:
             self._client = instructor.from_openai(http_client, mode=mode)
         return self._client
 
+    def _get_raw_client(self):
+        """
+        Lazily initialise a plain (non-Instructor-patched) OpenAI client.
+
+        Used by generate_text() for prose generation nodes. Cached the same way
+        as _get_client() so repeated calls within the same worker process reuse
+        the same connection pool instead of opening a new one on every LLM call.
+        """
+        if self._raw_client is None:
+            import openai
+
+            self._raw_client = (
+                openai.OpenAI(base_url=self._base_url, api_key=self._api_key)
+                if self._base_url
+                else openai.OpenAI(api_key=self._api_key)
+            )
+        return self._raw_client
+
     @traceable(name="structured_llm_generate_text")
     def generate_text(
         self,
@@ -101,15 +121,8 @@ class StructuredLLMClient:
         calling on some models (qwen2.5) which corrupts the response.
         Raw API calls return clean prose that these nodes simply return as-is.
         """
-        import openai
-
-        raw_client = (
-            openai.OpenAI(base_url=self._base_url, api_key=self._api_key)
-            if self._base_url
-            else openai.OpenAI(api_key=self._api_key)
-        )
         try:
-            response = raw_client.chat.completions.create(
+            response = self._get_raw_client().chat.completions.create(
                 model=self._model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -163,7 +176,7 @@ class StructuredLLMClient:
             result = self._get_client().chat.completions.create(
                 model=self._model,
                 response_model=response_model,
-                max_retries=0,
+                max_retries=AGENT_STRUCTURED_LLM_MAX_RETRIES,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},

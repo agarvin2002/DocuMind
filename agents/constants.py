@@ -14,17 +14,25 @@ AGENT_RETRIEVAL_K: int = 5      # chunks per sub-question (multi-hop)
 AGENT_COMPARISON_K: int = 8     # chunks per document (comparison / contradiction)
 
 # LLM generation limits
-# Sized for local Ollama (llama3.2:3b ≈ 5 tok/s):
-#   400 tokens → ~80s generation + ~20s prompt processing → ~100s total
-#   600 tokens → ~120s + ~20s → ~140s total
-# Both fit within AGENT_LLM_TIMEOUT_SECONDS=200. Production OpenAI is 200 tok/s,
-# so these limits are never approached there.
+# Sized for local Ollama (qwen2.5:3b ≈ 9 tok/s):
+#   1000 tokens ÷ 9 tok/s ≈ 111s generation + ~19s prompt = ~130s total,
+#   safely within AGENT_LLM_TIMEOUT_SECONDS=200. Truncation causes Instructor
+#   to retry, and retry prompts cause models to hallucinate garbage.
+# Production OpenAI is 200 tok/s, so these limits are never approached there.
 AGENT_SYNTHESIS_MAX_TOKENS: int = 1000   # final synthesis answer
 AGENT_SUBQUERY_MAX_TOKENS: int = 1000    # per-sub-question answer
-# Sized so qwen2.5:3b (9 tok/s) finishes naturally without truncation:
-# 1000 tokens ÷ 9 tok/s ≈ 111s generation + ~19s prompt = ~130s total,
-# safely within AGENT_LLM_TIMEOUT_SECONDS=200. Truncation causes Instructor
-# to retry, and retry prompts cause models to hallucinate garbage.
+
+# Planning step token limits — smaller because outputs are short structured JSON,
+# not prose. Classifier returns a 3-field schema; decomposer returns a list of strings.
+# 200 / 400 tokens is generous for these schemas — keeps latency low on local models.
+AGENT_CLASSIFY_MAX_TOKENS: int = 200
+AGENT_DECOMPOSE_MAX_TOKENS: int = 400
+
+# Instructor structured output retry count.
+# Intentionally 0 — Instructor retries multiply latency (each retry = full LLM call).
+# With local Ollama, 3 retries = 3× the timeout. Schema issues should be fixed at
+# the prompt level, not retried at runtime.
+AGENT_STRUCTURED_LLM_MAX_RETRIES: int = 0
 
 # LLM sampling — 0.0 = deterministic (good for classification/planning)
 AGENT_PLANNER_TEMPERATURE: float = 0.0

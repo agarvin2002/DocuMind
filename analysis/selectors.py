@@ -15,6 +15,7 @@ import redis as redis_lib
 from django.conf import settings
 from django.db.models import QuerySet
 
+from agents.constants import AGENT_JOB_RESULT_CACHE_PREFIX
 from analysis.exceptions import AnalysisJobNotFoundError
 from analysis.models import AnalysisJob
 
@@ -36,12 +37,10 @@ def _get_redis_pool() -> redis_lib.ConnectionPool:
 
 def get_job_by_id(job_id: str) -> AnalysisJob:
     """
-    Fetch an AnalysisJob by its UUID string.
+    Fetch an AnalysisJob by its UUID string from the database.
 
-    For completed jobs, checks the Redis cache first (fast path — avoids a
-    DB round-trip for the common GET poll pattern). Falls back to the database
-    on a cache miss. The cache holds result_data only, so we always return a
-    full AnalysisJob ORM instance from the DB.
+    Always hits the database. For a Redis-first fast path on completed jobs,
+    use get_cached_result() before calling this function.
 
     Args:
         job_id: UUID string of the job.
@@ -65,7 +64,7 @@ def get_cached_result(job_id: str) -> dict | None:
     Non-fatal: returns None on any error (cache miss, Redis down, bad JSON).
     The caller falls back to the database when None is returned.
 
-    Redis key: documind:agent:result:v1:{job_id}
+    Redis key: AGENT_JOB_RESULT_CACHE_PREFIX + job_id
 
     Args:
         job_id: UUID string of the job.
@@ -73,7 +72,7 @@ def get_cached_result(job_id: str) -> dict | None:
     Returns:
         The result dict, or None on a cache miss or error.
     """
-    key = f"documind:agent:result:v1:{job_id}"
+    key = f"{AGENT_JOB_RESULT_CACHE_PREFIX}{job_id}"
     try:
         conn = redis_lib.Redis(connection_pool=_get_redis_pool())
         raw = conn.get(key)

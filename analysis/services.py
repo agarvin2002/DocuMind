@@ -16,13 +16,10 @@ import redis as redis_lib
 from django.conf import settings
 from django.utils import timezone
 
+from agents.constants import AGENT_JOB_RESULT_CACHE_PREFIX, AGENT_JOB_RESULT_TTL
 from analysis.models import AnalysisJob
 
 logger = logging.getLogger(__name__)
-
-# TTL for completed job result in Redis (1 hour). Duplicated from agents/constants.py
-# to avoid a circular import at module load time — agents/ is created in Step 5.
-_JOB_RESULT_TTL: int = 3600
 
 # Module-level pool — connections are reused across Celery tasks instead of torn down per call.
 _redis_pool: redis_lib.ConnectionPool | None = None
@@ -142,12 +139,12 @@ def _cache_job_result(job_id: str, result_data: dict) -> None:
     Non-fatal: any Redis error is swallowed and logged as a warning.
     The selector falls back to the database on a cache miss.
 
-    Redis key: documind:agent:result:v1:{job_id}
-    TTL: 3600 seconds (1 hour)
+    Redis key: AGENT_JOB_RESULT_CACHE_PREFIX + job_id
+    TTL: AGENT_JOB_RESULT_TTL seconds
     """
-    key = f"documind:agent:result:v1:{job_id}"
+    key = f"{AGENT_JOB_RESULT_CACHE_PREFIX}{job_id}"
     try:
         conn = redis_lib.Redis(connection_pool=_get_redis_pool())
-        conn.set(key, json.dumps(result_data), ex=_JOB_RESULT_TTL)
+        conn.set(key, json.dumps(result_data), ex=AGENT_JOB_RESULT_TTL)
     except Exception:  # noqa: BLE001
         logger.warning("agent_result_cache_write_failed", extra={"job_id": job_id})
