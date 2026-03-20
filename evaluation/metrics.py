@@ -1,20 +1,19 @@
-"""RAGAS metric computation for RAG evaluation.
+"""RAGAS metric computation and threshold checking for RAG evaluation."""
 
-Usage:
-    scorer = RagasScorer()
-    result = compute_ragas_metrics(questions, answers, contexts, ground_truths, scorer=scorer)
-"""
-
+import concurrent.futures
 import logging
 from dataclasses import dataclass
 
 from evaluation.constants import (
     ANSWER_RELEVANCY_THRESHOLD,
     CONTEXT_RECALL_THRESHOLD,
+    EVAL_RAGAS_TIMEOUT_SECONDS,
     FAITHFULNESS_THRESHOLD,
     RAGAS_JUDGE_MAX_TOKENS,
     RAGAS_JUDGE_TEMPERATURE,
     RAGAS_LLM_MODEL,
+    RAGAS_OLLAMA_BASE_URL,
+    RAGAS_OLLAMA_MODEL,
 )
 from evaluation.exceptions import MetricComputeError
 from evaluation.protocols import RAGScorerPort
@@ -27,6 +26,7 @@ _ANSWER_RELEVANCY_KEY = "answer_relevancy"
 _CONTEXT_RECALL_KEY = "context_recall"
 
 
+# Plain dataclass (not Pydantic) — internal eval container; no HTTP boundary validation needed.
 @dataclass
 class MetricResult:
     """Scores and pass/fail verdict for a single eval run."""
@@ -102,24 +102,23 @@ def compute_ragas_metrics(
 class RagasScorer:
     """Production scorer — calls real RAGAS evaluate() with a configurable judge LLM.
 
-    Provider is resolved from Django settings at instantiation time, following the
-    same pattern as AGENT_LLM_PROVIDER in Phase 5:
-      - RAGAS_JUDGE_PROVIDER=ollama  → uses local Ollama (no API key needed)
-      - RAGAS_JUDGE_PROVIDER=openai  → uses OpenAI (requires OPENAI_API_KEY)
-
-    Both use ChatOpenAI under the hood — Ollama is just ChatOpenAI pointed at
-    http://localhost:11434/v1, the same trick OllamaProvider uses in generation/llm.py.
-
     Satisfies RAGScorerPort. Imports RAGAS lazily to keep module load fast.
+    Configuration is injected at construction time so this class stays pure Python
+    with zero Django imports.
     """
 
-    def __init__(self) -> None:
-        from django.conf import settings
-
-        self._provider = getattr(settings, "RAGAS_JUDGE_PROVIDER", "openai")
-        self._openai_model = getattr(settings, "RAGAS_LLM_MODEL", RAGAS_LLM_MODEL)
-        self._ollama_model = getattr(settings, "RAGAS_OLLAMA_MODEL", "qwen2.5:3b")
-        self._ollama_base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434/v1")
+    def __init__(
+        self,
+        *,
+        provider: str = "openai",
+        openai_model: str = RAGAS_LLM_MODEL,
+        ollama_model: str = RAGAS_OLLAMA_MODEL,
+        ollama_base_url: str = RAGAS_OLLAMA_BASE_URL,
+    ) -> None:
+        self._provider = provider
+        self._openai_model = openai_model
+        self._ollama_model = ollama_model
+        self._ollama_base_url = ollama_base_url
 
         logger.info(
             "RagasScorer initialised",
@@ -190,7 +189,15 @@ class RagasScorer:
                 ContextRecall(llm=judge_llm),
             ]
 
-            result = evaluate(dataset, metrics=metrics)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(evaluate, dataset, metrics=metrics)
+                try:
+                    result = future.result(timeout=EVAL_RAGAS_TIMEOUT_SECONDS)
+                except concurrent.futures.TimeoutError as exc:
+                    raise MetricComputeError(
+                        f"RAGAS evaluation timed out after {EVAL_RAGAS_TIMEOUT_SECONDS}s"
+                    ) from exc
+
             scores = result.to_pandas().mean(numeric_only=True).to_dict()
 
             return {

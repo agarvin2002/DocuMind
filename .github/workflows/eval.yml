@@ -1,8 +1,9 @@
 name: Eval
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:  # run on demand
+  schedule:
+    - cron: '0 6 * * 1'  # weekly on Monday 06:00 UTC
 
 jobs:
   ragas-eval:

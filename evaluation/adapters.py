@@ -10,14 +10,15 @@ import logging
 from uuid import UUID
 
 from agents.protocols import StructuredLLMPort
+from evaluation.constants import (
+    EVAL_GENERATION_MAX_TOKENS,
+    EVAL_GENERATION_TEMPERATURE,
+    EVAL_GENERATION_TIMEOUT_SECONDS,
+)
 from evaluation.exceptions import BaselineError
+from ingestion.protocols import EmbedderProtocol
 
 logger = logging.getLogger(__name__)
-
-# Generation constants — kept consistent with the real query pipeline
-_GENERATION_TEMPERATURE = 0.1
-_GENERATION_MAX_TOKENS = 1024
-_GENERATION_TIMEOUT = 60.0
 
 
 class FullSystemAdapter:
@@ -51,9 +52,9 @@ class FullSystemAdapter:
         answer_text = self._llm.generate_text(
             system_prompt=get_system_prompt(),
             user_message=build_user_message(question, chunks, max_context_tokens=6000),
-            temperature=_GENERATION_TEMPERATURE,
-            max_tokens=_GENERATION_MAX_TOKENS,
-            timeout=_GENERATION_TIMEOUT,
+            temperature=EVAL_GENERATION_TEMPERATURE,
+            max_tokens=EVAL_GENERATION_MAX_TOKENS,
+            timeout=EVAL_GENERATION_TIMEOUT_SECONDS,
         )
 
         return answer_text, contexts
@@ -67,7 +68,7 @@ class NaiveBaselineAdapter:
     FullSystemAdapter so the comparison measures retrieval quality alone.
     """
 
-    def __init__(self, llm: StructuredLLMPort, embedder) -> None:
+    def __init__(self, llm: StructuredLLMPort, embedder: EmbedderProtocol) -> None:
         self._llm = llm
         self._embedder = embedder
 
@@ -93,9 +94,9 @@ class NaiveBaselineAdapter:
             answer_text = self._llm.generate_text(
                 system_prompt=get_system_prompt(),
                 user_message=build_user_message(question, chunks, max_context_tokens=6000),
-                temperature=_GENERATION_TEMPERATURE,
-                max_tokens=_GENERATION_MAX_TOKENS,
-                timeout=_GENERATION_TIMEOUT,
+                temperature=EVAL_GENERATION_TEMPERATURE,
+                max_tokens=EVAL_GENERATION_MAX_TOKENS,
+                timeout=EVAL_GENERATION_TIMEOUT_SECONDS,
             )
 
             return answer_text, contexts

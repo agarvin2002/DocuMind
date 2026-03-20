@@ -1,9 +1,4 @@
-"""Evaluation harness — orchestrates dataset loading, answer collection, scoring, and caching.
-
-Usage:
-    harness = EvalHarness(full_system, baseline, scorer, redis_pool)
-    result = harness.run(samples)
-"""
+"""Evaluation harness — orchestrates dataset loading, answer collection, scoring, and caching."""
 
 import hashlib
 import json
@@ -30,6 +25,7 @@ from evaluation.protocols import RAGScorerPort, RAGSystemPort
 logger = logging.getLogger(__name__)
 
 
+# Plain dataclass (not Pydantic) — internal eval container; no HTTP boundary validation needed.
 @dataclass
 class EvalResult:
     """Full comparison between the full system and the naive baseline."""
@@ -130,8 +126,17 @@ class EvalHarness:
         results: list[tuple[EvalSample, str, list[str]]] = []
 
         with ThreadPoolExecutor(max_workers=EVAL_MAX_WORKERS) as executor:
+            def _resolve_uuid(s: EvalSample) -> UUID:
+                if not s.document_id:
+                    logger.warning(
+                        "Sample has empty document_id — using null UUID; will likely find no chunks",
+                        extra={"question": s.question[:80]},
+                    )
+                    return UUID(int=0)
+                return UUID(s.document_id)
+
             futures = {
-                executor.submit(rag_system.answer, s.question, UUID(s.document_id) if s.document_id else UUID(int=0), k): s
+                executor.submit(rag_system.answer, s.question, _resolve_uuid(s), k): s
                 for s in samples
             }
             for future in as_completed(futures):
@@ -176,8 +181,11 @@ class EvalHarness:
             if raw is None:
                 return None
             return _deserialize_result(json.loads(raw))
-        except Exception:  # noqa: BLE001
-            logger.warning("Eval cache read failed — proceeding without cache", extra={"key": key})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Eval cache read failed — proceeding without cache",
+                extra={"key": key, "error_type": type(exc).__name__},
+            )
             return None
 
     def _write_cache(self, key: str, result: EvalResult) -> None:
@@ -186,8 +194,11 @@ class EvalHarness:
         try:
             conn = redis_lib.Redis(connection_pool=self._redis_pool)
             conn.set(key, json.dumps(_serialize_result(result)), ex=EVAL_CACHE_TTL)
-        except Exception:  # noqa: BLE001
-            logger.warning("Eval cache write failed — result not cached", extra={"key": key})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Eval cache write failed — result not cached",
+                extra={"key": key, "error_type": type(exc).__name__},
+            )
 
 
 # --- helpers ---

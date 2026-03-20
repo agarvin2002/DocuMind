@@ -30,3 +30,17 @@ EVAL_BASELINE_K: int = 5  # chunks returned by naive vector-only baseline
 # Concurrent sample evaluation — same ThreadPoolExecutor pattern as retrieval/pipeline.py.
 # 5 workers keeps OpenAI rate limits comfortable while saving ~5× wall-clock time vs serial.
 EVAL_MAX_WORKERS: int = 5
+
+# Generation parameters used by both adapters — kept here so constants.py is the single source
+# of truth and the values stay in sync with each other.
+EVAL_GENERATION_TEMPERATURE: float = 0.1
+EVAL_GENERATION_MAX_TOKENS: int = 1024
+EVAL_GENERATION_TIMEOUT_SECONDS: float = 60.0  # per-LLM-call timeout (adapters)
+
+# Maximum wall-clock time allowed for a single RAGAS evaluate() call across all samples.
+# 300 s comfortably covers 50 samples × ~4 s per judge LLM call.
+EVAL_RAGAS_TIMEOUT_SECONDS: int = 300
+
+# Ollama defaults for the RAGAS judge LLM — mirrors AGENT_LLM_PROVIDER pattern from Phase 5.
+RAGAS_OLLAMA_MODEL: str = "qwen2.5:3b"
+RAGAS_OLLAMA_BASE_URL: str = "http://localhost:11434/v1"

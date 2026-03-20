@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 _REQUIRED_FIELDS = {"question", "ground_truth", "document_id", "document_title", "tags"}
 
 
+# Frozen dataclass (not Pydantic) — internal eval container; no HTTP boundary validation needed.
 @dataclass(frozen=True)
 class EvalSample:
     """A single ground-truth question-answer pair used for evaluation.

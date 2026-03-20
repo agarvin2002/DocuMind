@@ -18,11 +18,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
@@ -52,6 +55,7 @@ def _check_db() -> None:
     try:
         connection.ensure_connection()
     except OperationalError as exc:
+        logger.error("Database unreachable", extra={"error": str(exc), "error_type": type(exc).__name__})
         print(f"ERROR: Database unreachable — {exc}", file=sys.stderr)
         sys.exit(2)
 

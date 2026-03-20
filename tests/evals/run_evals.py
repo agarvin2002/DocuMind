@@ -34,12 +34,18 @@ django.setup()
 
 import logging  # noqa: E402
 
+from django.conf import settings as django_settings  # noqa: E402
 from django.db import OperationalError, connection  # noqa: E402
 
 from documents.models import Document  # noqa: E402
 from documents.services import create_document, trigger_ingestion  # noqa: E402
 from evaluation.adapters import FullSystemAdapter, NaiveBaselineAdapter  # noqa: E402
-from evaluation.constants import EVAL_DATASET_PATH  # noqa: E402
+from evaluation.constants import (  # noqa: E402
+    EVAL_DATASET_PATH,
+    RAGAS_LLM_MODEL,
+    RAGAS_OLLAMA_BASE_URL,
+    RAGAS_OLLAMA_MODEL,
+)
 from evaluation.datasets import EvalDatasetLoader, EvalSample  # noqa: E402
 from evaluation.harness import EvalHarness  # noqa: E402
 from evaluation.metrics import RagasScorer  # noqa: E402
@@ -216,7 +222,12 @@ def main() -> None:
     embedder = SentenceTransformerEmbedder()
     full_system = FullSystemAdapter(llm=llm)
     baseline = NaiveBaselineAdapter(llm=llm, embedder=embedder)
-    scorer = RagasScorer()
+    scorer = RagasScorer(
+        provider=getattr(django_settings, "RAGAS_JUDGE_PROVIDER", "openai"),
+        openai_model=getattr(django_settings, "RAGAS_LLM_MODEL", RAGAS_LLM_MODEL),
+        ollama_model=getattr(django_settings, "RAGAS_OLLAMA_MODEL", RAGAS_OLLAMA_MODEL),
+        ollama_base_url=getattr(django_settings, "OLLAMA_BASE_URL", RAGAS_OLLAMA_BASE_URL),
+    )
 
     # Build harness (no Redis pool in this runner — keep it dependency-light)
     harness = EvalHarness(
