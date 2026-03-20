@@ -243,6 +243,11 @@ uv run python tests/evals/run_evals.py
 uv run python scripts/benchmark.py
 ```
 
+### Generate eval sample PDFs (run once before first eval)
+```bash
+uv run python scripts/create_eval_docs.py
+```
+
 ---
 
 ## Ingestion Scripts
