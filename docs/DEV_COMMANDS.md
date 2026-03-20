@@ -233,19 +233,24 @@ uv run pytest --cov=src/documind
 
 ## Evaluation
 
-### Run the full evaluation pipeline
+### Generate eval sample PDFs (run once before first eval)
+```bash
+uv run python scripts/create_eval_docs.py
+```
+
+### Run the full evaluation pipeline (requires OPENAI_API_KEY + Docker)
 ```bash
 uv run python tests/evals/run_evals.py
 ```
 
-### Run the retrieval benchmark
+### Run evaluation smoke test — 3 samples only, no real LLM cost
 ```bash
-uv run python scripts/benchmark.py
+uv run python tests/evals/run_evals.py --dry-run
 ```
 
-### Generate eval sample PDFs (run once before first eval)
+### Run the retrieval Precision@5 benchmark (no LLM cost)
 ```bash
-uv run python scripts/create_eval_docs.py
+uv run python scripts/benchmark.py
 ```
 
 ---
