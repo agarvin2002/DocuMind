@@ -259,7 +259,8 @@ class TestSimplePassthroughNode:
             gen_tool=_fake_gen_tool(answer="simple answer"),
         )
         assert result["final_answer"] == "simple answer"
-        assert result["citations"] == []
+        assert len(result["citations"]) >= 1
+        assert result["citations"][0]["document_title"] == "Doc"
 
     def test_sets_error_on_retrieval_failure(self):
         state = _base_state()

@@ -41,6 +41,27 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _chunks_to_citations(chunks: list) -> list[dict]:
+    """Deduplicated citation list from retrieved chunks, ordered by first appearance."""
+    seen: set[tuple] = set()
+    citations: list[dict] = []
+    for chunk in chunks:
+        key = (chunk.document_title, chunk.page_number)
+        if key not in seen:
+            seen.add(key)
+            citations.append({
+                "document_title": chunk.document_title,
+                "page_number": chunk.page_number,
+                "chunk_id": chunk.chunk_id,
+            })
+    return citations
+
+
+# ---------------------------------------------------------------------------
 # Shared state definition
 # ---------------------------------------------------------------------------
 
@@ -198,8 +219,9 @@ def synthesize_node(
             sub_questions=state["sub_questions"],
             sub_answers=state["sub_answers"],
         )
+        all_chunks = [chunk for sr in state["sub_results"] for chunk in sr.chunks]
         logger.info("synthesize_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": []}
+        return {"final_answer": final_answer, "citations": _chunks_to_citations(all_chunks)}
     except SynthesisError as exc:
         logger.error("synthesize_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
         return {"error": str(exc)}
@@ -247,7 +269,7 @@ def comparison_generate_node(
             prompt_key="comparison",
         )
         logger.info("comparison_generate_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": []}
+        return {"final_answer": final_answer, "citations": _chunks_to_citations(state["retrieved_chunks"])}
     except SynthesisError as exc:
         logger.error("comparison_generate_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
         return {"error": str(exc)}
@@ -295,7 +317,7 @@ def contradiction_detect_node(
             prompt_key="contradiction_detection",
         )
         logger.info("contradiction_detect_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": []}
+        return {"final_answer": final_answer, "citations": _chunks_to_citations(state["retrieved_chunks"])}
     except SynthesisError as exc:
         logger.error("contradiction_detect_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
         return {"error": str(exc)}
@@ -324,7 +346,7 @@ def simple_passthrough_node(
             prompt_key="sub_answer",
         )
         logger.info("simple_passthrough_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": []}
+        return {"final_answer": final_answer, "citations": _chunks_to_citations(chunks)}
     except (RetrievalAgentError, SynthesisError) as exc:
         logger.error("simple_passthrough_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
         return {"error": str(exc)}
