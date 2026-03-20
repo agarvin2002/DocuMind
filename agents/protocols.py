@@ -13,7 +13,9 @@ Usage:
 """
 
 import uuid
-from typing import Protocol
+from typing import Protocol, TypeVar
+
+T = TypeVar("T")
 
 from retrieval.schemas import ChunkSearchResult
 
@@ -38,12 +40,12 @@ class StructuredLLMPort(Protocol):
         self,
         system_prompt: str,
         user_message: str,
-        response_model: type,
+        response_model: type[T],
         *,
         temperature: float,
         max_tokens: int,
         timeout: float,
-    ) -> object: ...
+    ) -> T: ...
 
     def generate_text(
         self,

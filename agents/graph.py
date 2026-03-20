@@ -20,6 +20,7 @@ Workflow routing (set by classify_query_node):
 """
 
 import logging
+import uuid
 from functools import partial
 from typing import Any, TypedDict
 
@@ -82,10 +83,8 @@ def classify_query_node(
     Classify the question's complexity and determine the workflow type.
     Sets state["workflow_type"] so routing can direct to the correct path.
     """
-    import uuid as _uuid
-
     try:
-        doc_ids = [_uuid.UUID(d) for d in state["document_ids"]]
+        doc_ids = [uuid.UUID(d) for d in state["document_ids"]]
         result = planner.classify(state["question"], doc_ids)
         logger.info(
             "classify_query_node_complete",
@@ -130,10 +129,8 @@ def retrieve_for_subquestion_node(
     Run retrieval for each sub-question against the first document_id.
     Produces a list of SubQueryResult (one per sub-question).
     """
-    import uuid as _uuid
-
     sub_results: list[SubQueryResult] = []
-    document_id = _uuid.UUID(state["document_ids"][0])
+    document_id = uuid.UUID(state["document_ids"][0])
 
     try:
         for sub_q in state["sub_questions"]:
@@ -217,12 +214,10 @@ def comparison_retrieve_node(
     Retrieve chunks from every document in scope for comparison.
     All chunks are pooled into retrieved_chunks.
     """
-    import uuid as _uuid
-
     all_chunks = []
     try:
         for doc_id_str in state["document_ids"]:
-            doc_id = _uuid.UUID(doc_id_str)
+            doc_id = uuid.UUID(doc_id_str)
             chunks = retrieval_tool.retrieve(
                 query=state["question"],
                 document_id=doc_id,
@@ -267,12 +262,10 @@ def contradiction_retrieve_node(
     Retrieve chunks from every document for contradiction detection.
     Same retrieval logic as comparison — different generation prompt follows.
     """
-    import uuid as _uuid
-
     all_chunks = []
     try:
         for doc_id_str in state["document_ids"]:
-            doc_id = _uuid.UUID(doc_id_str)
+            doc_id = uuid.UUID(doc_id_str)
             chunks = retrieval_tool.retrieve(
                 query=state["question"],
                 document_id=doc_id,
@@ -318,10 +311,8 @@ def simple_passthrough_node(
     Single-pass retrieval + generation for simple questions.
     No decomposition or synthesis — one retrieve call, one LLM call.
     """
-    import uuid as _uuid
-
     try:
-        document_id = _uuid.UUID(state["document_ids"][0])
+        document_id = uuid.UUID(state["document_ids"][0])
         chunks = retrieval_tool.retrieve(
             query=state["question"],
             document_id=document_id,
