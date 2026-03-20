@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "description": "Ground-truth Q&A pairs for DocuMind evaluation. document_id is populated at runtime by run_evals.py after documents are ingested. Full 50 pairs added in Task 6.10.",
+  "samples": [
+    {
+      "question": "What is the primary difference between supervised and unsupervised learning?",
+      "ground_truth": "Supervised learning trains on labeled data where the correct output is known for each input, while unsupervised learning finds patterns in unlabeled data without predefined correct answers.",
+      "document_id": "",
+      "document_title": "ai_concepts",
+      "tags": ["factual", "comparison"]
+    },
+    {
+      "question": "What is the API rate limit for the DataVault Pro free tier?",
+      "ground_truth": "The DataVault Pro free tier allows 100 API requests per day with a maximum of 10 requests per minute.",
+      "document_id": "",
+      "document_title": "product_spec",
+      "tags": ["factual"]
+    },
+    {
+      "question": "What was the global average temperature anomaly reported in the 2024 climate data?",
+      "ground_truth": "The 2024 climate report recorded a global average temperature anomaly of +1.45 degrees Celsius above the pre-industrial baseline.",
+      "document_id": "",
+      "document_title": "science_report",
+      "tags": ["factual"]
+    }
+  ]
+}
