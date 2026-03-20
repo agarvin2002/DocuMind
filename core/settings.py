@@ -231,6 +231,15 @@ OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 # Phase 4 Ollama + Phase 5 OpenAI in parallel during testing).
 AGENT_LLM_PROVIDER = env("AGENT_LLM_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
 
+# RAGAS judge provider — selects the LLM that scores eval outputs (faithfulness etc.).
+# Valid values: "ollama", "openai". Same logic as AGENT_LLM_PROVIDER:
+# defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
+# Switch to "openai" once you have an OPENAI_API_KEY — scoring quality improves noticeably.
+RAGAS_JUDGE_PROVIDER = env("RAGAS_JUDGE_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
+# Which Ollama model to use as the RAGAS judge. Must be pulled first:
+#   docker compose exec ollama ollama pull qwen2.5:3b
+RAGAS_OLLAMA_MODEL = env("RAGAS_OLLAMA_MODEL", default="qwen2.5:3b")
+
 # ---------------------------------------------------------------------------
 # LLM Generation — tuning knobs
 # ---------------------------------------------------------------------------

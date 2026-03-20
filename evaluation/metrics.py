@@ -100,14 +100,55 @@ def compute_ragas_metrics(
 
 
 class RagasScorer:
-    """Production scorer — calls real RAGAS evaluate() with GPT-4o-mini as judge.
+    """Production scorer — calls real RAGAS evaluate() with a configurable judge LLM.
 
-    Satisfies RAGScorerPort. Imports RAGAS lazily to keep module load fast and
-    avoid import errors in environments where the OpenAI key is not configured.
+    Provider is resolved from Django settings at instantiation time, following the
+    same pattern as AGENT_LLM_PROVIDER in Phase 5:
+      - RAGAS_JUDGE_PROVIDER=ollama  → uses local Ollama (no API key needed)
+      - RAGAS_JUDGE_PROVIDER=openai  → uses OpenAI (requires OPENAI_API_KEY)
+
+    Both use ChatOpenAI under the hood — Ollama is just ChatOpenAI pointed at
+    http://localhost:11434/v1, the same trick OllamaProvider uses in generation/llm.py.
+
+    Satisfies RAGScorerPort. Imports RAGAS lazily to keep module load fast.
     """
 
-    def __init__(self, llm_model: str = RAGAS_LLM_MODEL) -> None:
-        self._llm_model = llm_model
+    def __init__(self) -> None:
+        from django.conf import settings
+
+        self._provider = getattr(settings, "RAGAS_JUDGE_PROVIDER", "openai")
+        self._openai_model = getattr(settings, "RAGAS_LLM_MODEL", RAGAS_LLM_MODEL)
+        self._ollama_model = getattr(settings, "RAGAS_OLLAMA_MODEL", "qwen2.5:3b")
+        self._ollama_base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434/v1")
+
+        logger.info(
+            "RagasScorer initialised",
+            extra={"provider": self._provider, "model": self._ollama_model if self._provider == "ollama" else self._openai_model},
+        )
+
+    def _build_judge_llm(self):
+        """Build the LangChain-wrapped judge LLM for the configured provider."""
+        from langchain_openai import ChatOpenAI
+        from ragas.llms import LangchainLLMWrapper
+
+        if self._provider == "ollama":
+            # Ollama exposes an OpenAI-compatible API at /v1 — same trick as OllamaProvider.
+            # A dummy API key is required by the SDK but is not validated by Ollama.
+            chat = ChatOpenAI(
+                model=self._ollama_model,
+                base_url=self._ollama_base_url,
+                api_key="ollama",  # noqa: S106 — dummy key, Ollama does not validate it
+                temperature=RAGAS_JUDGE_TEMPERATURE,
+                max_tokens=RAGAS_JUDGE_MAX_TOKENS,
+            )
+        else:
+            chat = ChatOpenAI(
+                model=self._openai_model,
+                temperature=RAGAS_JUDGE_TEMPERATURE,
+                max_tokens=RAGAS_JUDGE_MAX_TOKENS,
+            )
+
+        return LangchainLLMWrapper(chat)
 
     def score(
         self,
@@ -122,9 +163,7 @@ class RagasScorer:
             MetricComputeError: If RAGAS or the judge LLM raises any exception.
         """
         try:
-            from langchain_openai import ChatOpenAI
             from ragas import EvaluationDataset, SingleTurnSample, evaluate
-            from ragas.llms import LangchainLLMWrapper
             from ragas.metrics import AnswerRelevancy, ContextRecall, Faithfulness
         except ImportError as exc:
             raise MetricComputeError(
@@ -132,13 +171,7 @@ class RagasScorer:
             ) from exc
 
         try:
-            judge_llm = LangchainLLMWrapper(
-                ChatOpenAI(
-                    model=self._llm_model,
-                    temperature=RAGAS_JUDGE_TEMPERATURE,
-                    max_tokens=RAGAS_JUDGE_MAX_TOKENS,
-                )
-            )
+            judge_llm = self._build_judge_llm()
 
             samples = [
                 SingleTurnSample(
