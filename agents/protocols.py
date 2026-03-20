@@ -15,9 +15,9 @@ Usage:
 import uuid
 from typing import Protocol, TypeVar
 
-T = TypeVar("T")
-
 from retrieval.schemas import ChunkSearchResult
+
+T = TypeVar("T")
 
 
 class StructuredLLMPort(Protocol):
