@@ -87,8 +87,10 @@ class AnalysisJobDetailView(APIView):
 
     def get(self, request: Request, job_id) -> Response:
         # Step 1: check Redis cache — completed jobs are served without a DB hit.
+        # Guard: only use the cached value if it has the expected job shape.
+        # An old-format entry (raw result_data without "status") is treated as a miss.
         cached = get_cached_result(str(job_id))
-        if cached is not None:
+        if cached is not None and "status" in cached:
             return Response(cached, status=200)
 
         # Step 2: cache miss — fetch from DB.
