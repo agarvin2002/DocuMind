@@ -146,3 +146,70 @@ class FakeRetrievalTool:
         if self.should_fail:
             raise RetrievalAgentError("fake retrieval failure")
         return self.chunks[:k]
+
+
+class FakeRAGSystem:
+    """Test double that satisfies RAGSystemPort.
+
+    Returns a fixed (answer, contexts) pair. Use should_fail=True to simulate
+    a system crash mid-evaluation.
+    """
+
+    def __init__(
+        self,
+        answer: str = "fake answer",
+        contexts: list[str] | None = None,
+        should_fail: bool = False,
+    ) -> None:
+        self._answer = answer
+        self._contexts = contexts or ["fake context chunk one", "fake context chunk two"]
+        self.should_fail = should_fail
+        self.call_count = 0
+
+    def answer(
+        self,
+        question: str,
+        document_id: uuid.UUID,
+        k: int,
+    ) -> tuple[str, list[str]]:
+        from evaluation.exceptions import EvaluationError
+
+        self.call_count += 1
+        if self.should_fail:
+            raise EvaluationError("fake RAG system failure")
+        return self._answer, self._contexts[:k]
+
+
+class FakeRAGScorer:
+    """Test double that satisfies RAGScorerPort.
+
+    Returns fixed metric scores. Use should_fail=True to simulate a RAGAS
+    judge LLM failure.
+    """
+
+    def __init__(
+        self,
+        scores: dict[str, float] | None = None,
+        should_fail: bool = False,
+    ) -> None:
+        self._scores = scores or {
+            "faithfulness": 0.90,
+            "answer_relevancy": 0.85,
+            "context_recall": 0.80,
+        }
+        self.should_fail = should_fail
+        self.call_count = 0
+
+    def score(
+        self,
+        questions: list[str],
+        answers: list[str],
+        contexts: list[list[str]],
+        ground_truths: list[str],
+    ) -> dict[str, float]:
+        from evaluation.exceptions import MetricComputeError
+
+        self.call_count += 1
+        if self.should_fail:
+            raise MetricComputeError("fake scorer failure")
+        return self._scores

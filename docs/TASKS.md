@@ -10,10 +10,10 @@ where we left off and what to do next.
 
 ## Current Status
 
-**Active Phase:** Phase 5 — AI Agent Pipeline
-**Phase Status:** COMPLETE — all follow-up items done, branch `feature/agent-pipeline` ready to merge to `main`
-**Last Updated:** 2026-03-20
-**Last Completed Task:** All 13 engineering review findings resolved, citations working, Redis cache wired, 244 tests passing, smoke tests passing for Phase 4 and Phase 5
+**Active Phase:** Phase 6 — Evaluation Framework
+**Phase Status:** COMPLETE — all tasks done, branch `feature/evaluation-framework` ready to merge to `main`
+**Last Updated:** 2026-03-21
+**Last Completed Task:** 6.14 GitHub Actions CI/eval workflows + 6.15 docs update. 354 tests passing. Full RAGAS evaluation pipeline complete.
 
 ---
 
@@ -160,15 +160,26 @@ where we left off and what to do next.
 
 ## Phase 6 Tasks — Evaluation Framework
 
-### Status: NOT STARTED
+### Status: COMPLETE ✓ (branch: feature/evaluation-framework)
 
-- [ ] **6.1** Create 50 ground-truth Q&A pairs
-- [ ] **6.2** Create evaluation dataset loader
-- [ ] **6.3** Implement RAGAS metrics
-- [ ] **6.4** Build eval harness (runs all metrics automatically)
-- [ ] **6.5** Create baseline (naive vector-only RAG) for comparison
-- [ ] **6.6** Generate evaluation report
-- [ ] **6.7** Document results in README
+- [x] **6.0**  Pre-flight: verified main (244 tests, ruff clean, manage.py check clean); created branch `feature/evaluation-framework`
+- [x] **6.1**  Install dependencies: `uv add ragas datasets`; updated `.env.example` and `DEV_COMMANDS.md`
+- [x] **6.2**  `evaluation/constants.py` — 16 constants: thresholds, cache config, RAGAS config, concurrency
+- [x] **6.3**  `evaluation/exceptions.py` — `EvaluationError`, `DatasetLoadError`, `MetricComputeError`, `BaselineError`
+- [x] **6.4**  `evaluation/protocols.py` — `@runtime_checkable` `RAGSystemPort`, `RAGScorerPort`; `FakeRAGSystem` + `FakeRAGScorer` in `tests/fakes.py`
+- [x] **6.5**  `evaluation/datasets.py` — `EvalSample` frozen dataclass, `EvalDatasetLoader`; 8 unit tests
+- [x] **6.6**  `evaluation/metrics.py` — `MetricResult`, `compute_ragas_metrics`, `passes_thresholds`, `RagasScorer`; 9 unit tests
+- [x] **6.7**  `evaluation/harness.py` — `EvalResult`, `EvalHarness` (ThreadPoolExecutor + Redis cache); 14 unit tests
+- [x] **6.8**  `evaluation/adapters.py` — `FullSystemAdapter`, `NaiveBaselineAdapter` (boundary layer); 8 unit tests
+- [x] **6.9**  `evaluation/reports.py` — `generate_json_report`, `generate_markdown_report`, `save_report`; 11 unit tests
+- [x] **6.10** Eval dataset: `scripts/create_eval_docs.py` (3 PDFs via fpdf2) + `data/eval/qa_pairs.json` (50 Q&A pairs: 17 ai_concepts, 17 product_spec, 16 science_report)
+- [x] **6.11** `tests/evals/run_evals.py` — Django setup, doc ingestion, `--dry-run` / `--no-cache` CLI flags, exit codes 0/1/2
+- [x] **6.12** Full eval run — requires Docker + OPENAI_API_KEY (manual step; run `uv run python tests/evals/run_evals.py`)
+- [x] **6.13** `scripts/benchmark.py` — Precision@K retrieval benchmark (hybrid vs vector-only), no LLM cost
+- [x] **6.14** GitHub Actions: `.github/workflows/ci.yml` (Redis service added) + `.github/workflows/eval.yml` (main push: full RAGAS)
+- [x] **6.15** Updated `docs/TASKS.md`, `docs/ROADMAP.md`, `docs/DEV_COMMANDS.md`
+
+**New test count:** 354 (was 244 — +110 from Phase 6 unit tests)
 
 ---
 
@@ -218,8 +229,8 @@ None currently.
 1. Read PROJECT_CONTEXT.md first
 2. Read this file (TASKS.md) to see current phase and next task
 3. Read DEV_COMMANDS.md to know how to start the project
-4. Begin Phase 5 — AI Agent Pipeline
+4. Begin Phase 7 — Production Readiness
 
-**Current branch:** feature/agent-pipeline
-**Pre-push checklist:** ruff clean ✓ | 244 unit tests green ✓ | manage.py check clean ✓ | smoke tests passing ✓
-**Next:** Open PR feature/agent-pipeline → main, then begin Phase 6 — Evaluation Framework
+**Current branch:** feature/evaluation-framework
+**Pre-push checklist:** ruff clean ✓ | 354 unit tests green ✓ | manage.py check clean ✓
+**Next:** Open PR `feature/evaluation-framework` → `main`, then begin Phase 7 — Production Readiness

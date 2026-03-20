@@ -44,3 +44,9 @@ coverage.xml
 logs/*.log
 logs/*.log.*
 !logs/.gitkeep
+
+# Eval — generated PDFs (recreated by scripts/create_eval_docs.py)
+data/eval/documents/*.pdf
+
+# Eval reports — generated output, not source
+eval_reports/
