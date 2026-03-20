@@ -110,7 +110,8 @@ def mark_job_complete(job: AnalysisJob, result_data: dict) -> None:
     job.result_data = result_data
     job.completed_at = timezone.now()
     job.save(update_fields=["status", "result_data", "completed_at", "updated_at"])
-    _cache_job_result(str(job.id), result_data)
+    from analysis.serializers import AnalysisJobSerializer
+    _cache_job_result(str(job.id), dict(AnalysisJobSerializer(job).data))
     logger.info("analysis_job_complete", extra={"job_id": str(job.id)})
 
 

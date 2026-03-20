@@ -259,7 +259,8 @@ class TestSimplePassthroughNode:
             gen_tool=_fake_gen_tool(answer="simple answer"),
         )
         assert result["final_answer"] == "simple answer"
-        assert result["citations"] == []
+        assert len(result["citations"]) >= 1
+        assert result["citations"][0]["document_title"] == "Doc"
 
     def test_sets_error_on_retrieval_failure(self):
         state = _base_state()
@@ -369,3 +370,31 @@ class TestFullGraphInvocation:
         )
         result = graph.invoke(_base_state())
         assert "Analysis failed" in result["final_answer"]
+
+    def test_comparison_graph_returns_answer_with_citations(self):
+        doc1, doc2 = str(uuid.uuid4()), str(uuid.uuid4())
+        graph = self._build(
+            planner=_fake_planner(workflow_type="comparison", complexity="complex"),
+            retrieval_tool=_fake_retrieval_tool(chunks=[_make_chunk("doc excerpt", page=3)]),
+            gen_tool=_fake_gen_tool(answer="Doc A is faster; Doc B is cheaper."),
+        )
+        state = _base_state(workflow_type="comparison", document_ids=[doc1, doc2])
+        result = graph.invoke(state)
+        assert result["final_answer"] == "Doc A is faster; Doc B is cheaper."
+        assert result["error"] is None
+        assert len(result["citations"]) >= 1
+        assert result["citations"][0]["page_number"] == 3
+
+    def test_contradiction_graph_returns_report_with_citations(self):
+        doc1, doc2 = str(uuid.uuid4()), str(uuid.uuid4())
+        graph = self._build(
+            planner=_fake_planner(workflow_type="contradiction", complexity="complex"),
+            retrieval_tool=_fake_retrieval_tool(chunks=[_make_chunk("claim text", page=7)]),
+            gen_tool=_fake_gen_tool(answer="Claim on page 7 contradicts Doc B."),
+        )
+        state = _base_state(workflow_type="contradiction", document_ids=[doc1, doc2])
+        result = graph.invoke(state)
+        assert result["final_answer"] == "Claim on page 7 contradicts Doc B."
+        assert result["error"] is None
+        assert len(result["citations"]) >= 1
+        assert result["citations"][0]["page_number"] == 7

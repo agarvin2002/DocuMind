@@ -165,3 +165,11 @@ class TestAnalysisJobDetailView:
         resp = client.get(f"/api/v1/analysis/{uuid.uuid4()}/")
         assert resp.status_code == 404
         assert "detail" in resp.data
+
+    def test_get_completed_job_served_from_cache(self, client):
+        job_id = str(uuid.uuid4())
+        cached_response = {"id": job_id, "status": "complete", "result_data": {"final_answer": "cached"}}
+        with patch("analysis.views.get_cached_result", return_value=cached_response):
+            resp = client.get(f"/api/v1/analysis/{job_id}/")
+        assert resp.status_code == 200
+        assert resp.data["result_data"]["final_answer"] == "cached"

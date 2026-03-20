@@ -40,5 +40,7 @@ coverage.xml
 
 # Logs — keep folder, ignore files
 *.log
+*.log.*
 logs/*.log
+logs/*.log.*
 !logs/.gitkeep

@@ -11,9 +11,9 @@ where we left off and what to do next.
 ## Current Status
 
 **Active Phase:** Phase 5 — AI Agent Pipeline
-**Phase Status:** COMPLETE — branch `feature/agent-pipeline` ready to merge to `main`
+**Phase Status:** COMPLETE — all follow-up items done, branch `feature/agent-pipeline` ready to merge to `main`
 **Last Updated:** 2026-03-20
-**Last Completed Task:** Phase 5 fully implemented, engineering review done, 6 high-severity issues fixed, smoke tests passing for both Phase 4 and Phase 5
+**Last Completed Task:** All 13 engineering review findings resolved, citations working, Redis cache wired, 244 tests passing, smoke tests passing for Phase 4 and Phase 5
 
 ---
 
@@ -147,14 +147,14 @@ where we left off and what to do next.
 - [x] **5.11** 127 Phase 5 unit tests passing (241 total)
 - [x] **5.12** OLLAMA_KEEP_ALIVE=-1 — permanent fix for cold-start timeouts
 
-### Phase 5 follow-up (track in feature/phase5-polish PR)
+### Phase 5 follow-up — ALL DONE (same branch)
 
-- [ ] **5.P1** F-07: Wire get_cached_result() into AnalysisJobDetailView — Redis fast path never called
-- [ ] **5.P2** F-08: Citations always return [] — extract from ChunkSearchResult in all terminal nodes
-- [ ] **5.P3** F-09: Remove dead code get_system_prompt() + _PROMPTS from generation/prompts.py
-- [ ] **5.P4** F-11: Move local uuid imports to module level in agents/graph.py
-- [ ] **5.P5** F-12: Add E2E graph tests for comparison and contradiction workflows
-- [ ] **5.P6** F-13: Fix StructuredLLMPort.complete() return type from object to T in agents/protocols.py
+- [x] **5.P1** F-07: Redis cache wired into AnalysisJobDetailView (guard: checks for `status` key)
+- [x] **5.P2** F-08: Citations populated from retrieved chunks in all 4 terminal nodes
+- [x] **5.P3** F-09: Skipped — get_system_prompt() is still used by Phase 4, not dead code
+- [x] **5.P4** F-11: uuid imports moved to module level in agents/graph.py
+- [x] **5.P5** F-12: E2E graph tests added for comparison and contradiction workflows
+- [x] **5.P6** F-13: StructuredLLMPort.complete() return type fixed to TypeVar T
 
 ---
 
@@ -221,5 +221,5 @@ None currently.
 4. Begin Phase 5 — AI Agent Pipeline
 
 **Current branch:** feature/agent-pipeline
-**Pre-push checklist:** ruff clean ✓ | 241 unit tests green ✓ | manage.py check clean ✓ | smoke tests passing ✓
-**Next:** Open PR feature/agent-pipeline → main, then start feature/phase5-polish for follow-up items (5.P1–5.P6), then begin Phase 6 — Evaluation Framework
+**Pre-push checklist:** ruff clean ✓ | 244 unit tests green ✓ | manage.py check clean ✓ | smoke tests passing ✓
+**Next:** Open PR feature/agent-pipeline → main, then begin Phase 6 — Evaluation Framework
