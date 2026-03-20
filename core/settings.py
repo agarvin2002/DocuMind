@@ -236,9 +236,11 @@ AGENT_LLM_PROVIDER = env("AGENT_LLM_PROVIDER", default="ollama" if env.bool("OLL
 # defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
 # Switch to "openai" once you have an OPENAI_API_KEY — scoring quality improves noticeably.
 RAGAS_JUDGE_PROVIDER = env("RAGAS_JUDGE_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
-# Which Ollama model to use as the RAGAS judge. Must be pulled first:
-#   docker compose exec ollama ollama pull qwen2.5:3b
+# Which Ollama model to use as the RAGAS judge (RAGAS_JUDGE_PROVIDER=ollama).
+# Must be pulled first: docker compose exec ollama ollama pull qwen2.5:3b
 RAGAS_OLLAMA_MODEL = env("RAGAS_OLLAMA_MODEL", default="qwen2.5:3b")
+# Which OpenAI model to use as the RAGAS judge (RAGAS_JUDGE_PROVIDER=openai).
+RAGAS_LLM_MODEL = env("RAGAS_LLM_MODEL", default="gpt-4o-mini")
 
 # ---------------------------------------------------------------------------
 # LLM Generation — tuning knobs
