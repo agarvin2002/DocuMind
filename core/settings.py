@@ -184,8 +184,10 @@ CELERY_TIMEZONE = "UTC"
 # A malformed PDF or hung embedding call would otherwise block a worker indefinitely.
 # SOFT_TIME_LIMIT raises SoftTimeLimitExceeded so the task can mark the document FAILED
 # and clean up before TIME_LIMIT force-kills the worker process.
-CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=240)  # 4 min
-CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=300)            # 5 min
+CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=600)  # 10 min
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=720)            # 12 min
+# Default is sized for local Ollama inference (multi-hop = ~7 LLM calls × ~80s each).
+# Production with GPT-4o completes in <30s — override to 300/360 via env var there.
 
 # Prevents slow ingestion tasks from holding prefetched slots hostage.
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
@@ -222,6 +224,13 @@ OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=False)
 OLLAMA_BASE_URL = env("OLLAMA_BASE_URL", default="http://localhost:11434/v1")
 OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 
+# Agent pipeline provider — selects which LLM the Phase 5 agent uses for
+# structured output (classify, decompose, generate). Valid values: "ollama", "openai".
+# Defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
+# Set to "openai" to use OpenAI even while OLLAMA_ENABLED=true (e.g. running both
+# Phase 4 Ollama + Phase 5 OpenAI in parallel during testing).
+AGENT_LLM_PROVIDER = env("AGENT_LLM_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
+
 # ---------------------------------------------------------------------------
 # LLM Generation — tuning knobs
 # ---------------------------------------------------------------------------
@@ -230,6 +239,11 @@ OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 DOCUMIND_LLM_TEMPERATURE = env.float("DOCUMIND_LLM_TEMPERATURE", default=0.1)
 DOCUMIND_LLM_MAX_TOKENS = env.int("DOCUMIND_LLM_MAX_TOKENS", default=1024)
 DOCUMIND_LLM_TIMEOUT_SECONDS = env.float("DOCUMIND_LLM_TIMEOUT_SECONDS", default=30.0)
+# Agent pipeline timeout — higher than streaming timeout because agent LLM calls are
+# non-streaming and local Ollama inference can take 60-200s per call on consumer hardware.
+# 800 tokens ÷ 5 tok/s (llama3.2:3b) = 160s per call → 200s gives safe headroom.
+# Production OpenAI: 800 tokens ÷ 200 tok/s = 4s — this limit is never reached.
+AGENT_LLM_TIMEOUT_SECONDS = env.float("AGENT_LLM_TIMEOUT_SECONDS", default=200.0)
 # Max tokens of document context sent to the LLM. Chunks are trimmed if over this limit.
 DOCUMIND_MAX_CONTEXT_TOKENS = env.int("DOCUMIND_MAX_CONTEXT_TOKENS", default=6000)
 

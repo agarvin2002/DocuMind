@@ -11,9 +11,9 @@ where we left off and what to do next.
 ## Current Status
 
 **Active Phase:** Phase 5 — AI Agent Pipeline
-**Phase Status:** NOT STARTED
-**Last Updated:** 2026-03-16
-**Last Completed Task:** Phase 4 complete — 95 unit tests passing (37 new generation tests)
+**Phase Status:** COMPLETE — branch `feature/agent-pipeline` ready to merge to `main`
+**Last Updated:** 2026-03-20
+**Last Completed Task:** Phase 5 fully implemented, engineering review done, 6 high-severity issues fixed, smoke tests passing for both Phase 4 and Phase 5
 
 ---
 
@@ -132,17 +132,29 @@ where we left off and what to do next.
 
 ## Phase 5 Tasks — AI Agent Pipeline
 
-### Status: NOT STARTED
+### Status: COMPLETE ✓ (branch: feature/agent-pipeline — open PR to merge to main)
 
-- [ ] **5.1** Create agent tools (search, summarize)
-- [ ] **5.2** Build LangGraph state machine
-- [ ] **5.3** Implement query planner (decomposition)
-- [ ] **5.4** Implement multi-hop search executor
-- [ ] **5.5** Implement result synthesizer
-- [ ] **5.6** Create document comparison workflow
-- [ ] **5.7** Create contradiction detection workflow
-- [ ] **5.8** Create POST /analysis endpoint
-- [ ] **5.9** Test: ask a complex question that requires multi-hop reasoning
+- [x] **5.1** Create agent tools — RetrievalTool, GenerationTool (agents/tools.py)
+- [x] **5.2** Build LangGraph state machine — 10 nodes, 4 routing functions (agents/graph.py)
+- [x] **5.3** Implement query planner — classify() + decompose() with Redis cache (agents/query_planner.py)
+- [x] **5.4** Implement multi-hop search executor — RetrieveForSubquestion + GenerateSubAnswers nodes
+- [x] **5.5** Implement result synthesizer — Synthesize node (agents/graph.py)
+- [x] **5.6** Create document comparison workflow — ComparisonRetrieve + ComparisonGenerate nodes
+- [x] **5.7** Create contradiction detection workflow — ContradictionDetect node
+- [x] **5.8** Create POST /analysis/ + GET /analysis/{id}/ endpoints (analysis/views.py)
+- [x] **5.9** Smoke tests passing — both Phase 4 streaming and Phase 5 async jobs produce real answers
+- [x] **5.10** Engineering review — 13 findings, 6 HIGH fixed (F-01 to F-06 + F-10)
+- [x] **5.11** 127 Phase 5 unit tests passing (241 total)
+- [x] **5.12** OLLAMA_KEEP_ALIVE=-1 — permanent fix for cold-start timeouts
+
+### Phase 5 follow-up (track in feature/phase5-polish PR)
+
+- [ ] **5.P1** F-07: Wire get_cached_result() into AnalysisJobDetailView — Redis fast path never called
+- [ ] **5.P2** F-08: Citations always return [] — extract from ChunkSearchResult in all terminal nodes
+- [ ] **5.P3** F-09: Remove dead code get_system_prompt() + _PROMPTS from generation/prompts.py
+- [ ] **5.P4** F-11: Move local uuid imports to module level in agents/graph.py
+- [ ] **5.P5** F-12: Add E2E graph tests for comparison and contradiction workflows
+- [ ] **5.P6** F-13: Fix StructuredLLMPort.complete() return type from object to T in agents/protocols.py
 
 ---
 
@@ -208,6 +220,6 @@ None currently.
 3. Read DEV_COMMANDS.md to know how to start the project
 4. Begin Phase 5 — AI Agent Pipeline
 
-**Current branch:** feature/generation
-**Pre-push checklist:** ruff clean ✓ | 95 unit tests green ✓ | manage.py check clean ✓
-**Next:** Begin Phase 5 — AI Agent Pipeline (LangGraph state machine, multi-hop reasoning)
+**Current branch:** feature/agent-pipeline
+**Pre-push checklist:** ruff clean ✓ | 241 unit tests green ✓ | manage.py check clean ✓ | smoke tests passing ✓
+**Next:** Open PR feature/agent-pipeline → main, then start feature/phase5-polish for follow-up items (5.P1–5.P6), then begin Phase 6 — Evaluation Framework

@@ -1,13 +1,26 @@
-"""Analysis app — custom exceptions."""
-
-from core.exceptions import DocuMindError
+from core.exceptions import DocuMindError, NotFoundError
 
 
 class AgentError(DocuMindError):
-    """Raised when an agent workflow fails."""
     default_message = "Agent execution failed."
+    http_status_code = 500
 
 
 class PlanningError(AgentError):
-    """Raised when the query planner cannot decompose a question."""
-    default_message = "Failed to plan query execution."
+    default_message = "Failed to decompose query into sub-questions."
+    http_status_code = 422
+
+
+class RetrievalAgentError(AgentError):
+    default_message = "Agent retrieval step failed."
+    http_status_code = 502
+
+
+class SynthesisError(AgentError):
+    default_message = "Agent synthesis step failed."
+    http_status_code = 502
+
+
+class AnalysisJobNotFoundError(NotFoundError):
+    default_message = "Analysis job not found."
+    http_status_code = 404

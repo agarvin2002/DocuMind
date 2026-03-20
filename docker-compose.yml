@@ -71,6 +71,11 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: documind_ollama
+    environment:
+      # Keep the loaded model in memory indefinitely — prevents the 30-60s cold-start
+      # penalty that occurs when Ollama unloads an idle model after 5 minutes.
+      # Without this, the first request after idle always times out on local hardware.
+      OLLAMA_KEEP_ALIVE: "-1"
     ports:
       - "11434:11434"                  # Django (on host) connects at localhost:11434
     volumes:

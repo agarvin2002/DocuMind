@@ -16,3 +16,6 @@ Usage:
 
 # documents app tasks
 INGEST_DOCUMENT: str = "documents.tasks.ingest_document"
+
+# analysis app tasks
+RUN_ANALYSIS_JOB: str = "analysis.tasks.run_analysis_job"
