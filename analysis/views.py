@@ -19,7 +19,7 @@ from rest_framework.views import APIView
 
 from analysis.exceptions import AnalysisJobNotFoundError
 from analysis.models import AnalysisJob
-from analysis.selectors import get_job_by_id
+from analysis.selectors import get_cached_result, get_job_by_id
 from analysis.serializers import AnalysisJobSerializer, AnalysisRequestSerializer
 from analysis.services import create_analysis_job, dispatch_analysis_task
 from documents.exceptions import DocumentNotFoundError
@@ -86,11 +86,15 @@ class AnalysisJobDetailView(APIView):
     """
 
     def get(self, request: Request, job_id) -> Response:
-        # Step 1 & 2: fetch job — raises AnalysisJobNotFoundError if missing.
+        # Step 1: check Redis cache — completed jobs are served without a DB hit.
+        cached = get_cached_result(str(job_id))
+        if cached is not None:
+            return Response(cached, status=200)
+
+        # Step 2: cache miss — fetch from DB.
         try:
             job = get_job_by_id(str(job_id))
         except AnalysisJobNotFoundError as exc:
             return Response({"detail": str(exc)}, status=exc.http_status_code)
 
-        # Step 3 & 4: return serialized job.
         return Response(AnalysisJobSerializer(job).data, status=200)
