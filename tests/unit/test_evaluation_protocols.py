@@ -86,7 +86,11 @@ class TestRAGScorerPort:
             fake.score(["q"], ["a"], [["c"]], ["gt"])
 
     def test_custom_scores_are_returned(self):
-        custom = {"faithfulness": 0.99, "answer_relevancy": 0.95, "context_recall": 0.91}
+        custom = {
+            "faithfulness": 0.99,
+            "answer_relevancy": 0.95,
+            "context_recall": 0.91,
+        }
         fake = FakeRAGScorer(scores=custom)
         result = fake.score(["q"], ["a"], [["c"]], ["gt"])
         assert result == custom

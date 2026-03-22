@@ -38,9 +38,7 @@ class SentenceTransformerEmbedder:
 
     def __init__(self, model_name: str | None = None) -> None:
         self._model_name = (
-            model_name
-            or os.environ.get("EMBEDDING_MODEL_NAME")
-            or _DEFAULT_MODEL
+            model_name or os.environ.get("EMBEDDING_MODEL_NAME") or _DEFAULT_MODEL
         )
         # Deferred to first embed_batch() call — not loaded at construction time.
         self._model = None
@@ -95,9 +93,7 @@ class SentenceTransformerEmbedder:
             embeddings = self._model.encode(texts, convert_to_numpy=True)
             result: list[list[float]] = [vec.tolist() for vec in embeddings]
         except Exception as e:  # noqa: BLE001
-            raise EmbeddingGenerationError(
-                f"Embedding generation failed: {e}"
-            ) from e
+            raise EmbeddingGenerationError(f"Embedding generation failed: {e}") from e
 
         logger.debug(
             "Batch embedding complete",

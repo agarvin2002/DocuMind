@@ -15,6 +15,7 @@ from tests.fakes import FakeRAGScorer, FakeRAGSystem
 
 # --- fixtures ---
 
+
 def _make_sample(n: int = 0, doc_id: str = "") -> EvalSample:
     return EvalSample(
         question=f"question {n}",
@@ -30,11 +31,23 @@ def _make_samples(count: int = 3) -> list[EvalSample]:
 
 
 def _passing_metric() -> MetricResult:
-    return MetricResult(faithfulness=0.90, answer_relevancy=0.85, context_recall=0.80, sample_count=3, passed=True)
+    return MetricResult(
+        faithfulness=0.90,
+        answer_relevancy=0.85,
+        context_recall=0.80,
+        sample_count=3,
+        passed=True,
+    )
 
 
 def _failing_metric() -> MetricResult:
-    return MetricResult(faithfulness=0.60, answer_relevancy=0.55, context_recall=0.50, sample_count=3, passed=False)
+    return MetricResult(
+        faithfulness=0.60,
+        answer_relevancy=0.55,
+        context_recall=0.50,
+        sample_count=3,
+        passed=False,
+    )
 
 
 @pytest.fixture
@@ -42,12 +55,19 @@ def harness():
     return EvalHarness(
         full_system=FakeRAGSystem(answer="full answer"),
         baseline=FakeRAGSystem(answer="baseline answer"),
-        scorer=FakeRAGScorer(scores={"faithfulness": 0.90, "answer_relevancy": 0.85, "context_recall": 0.80}),
+        scorer=FakeRAGScorer(
+            scores={
+                "faithfulness": 0.90,
+                "answer_relevancy": 0.85,
+                "context_recall": 0.80,
+            }
+        ),
         redis_pool=None,
     )
 
 
 # --- EvalHarness.run ---
+
 
 class TestEvalHarnessRun:
     def test_returns_eval_result(self, harness):
@@ -64,7 +84,11 @@ class TestEvalHarnessRun:
 
     def test_improvements_pct_has_three_keys(self, harness):
         result = harness.run(_make_samples())
-        assert set(result.improvements_pct.keys()) == {"faithfulness", "answer_relevancy", "context_recall"}
+        assert set(result.improvements_pct.keys()) == {
+            "faithfulness",
+            "answer_relevancy",
+            "context_recall",
+        }
 
     def test_cache_hit_skips_computation(self):
         scorer = FakeRAGScorer()
@@ -78,7 +102,11 @@ class TestEvalHarnessRun:
         cached_result = EvalResult(
             full_system=_passing_metric(),
             baseline=_failing_metric(),
-            improvements_pct={"faithfulness": 50.0, "answer_relevancy": 54.5, "context_recall": 60.0},
+            improvements_pct={
+                "faithfulness": 50.0,
+                "answer_relevancy": 54.5,
+                "context_recall": 60.0,
+            },
             verdict="PASS",
             dataset_size=2,
         )
@@ -115,6 +143,7 @@ class TestEvalHarnessRun:
 
 # --- _collect_answers ---
 
+
 class TestCollectAnswers:
     def test_all_samples_fail_raises_evaluation_error(self):
         harness = EvalHarness(
@@ -149,21 +178,35 @@ class TestCollectAnswers:
 
 # --- _compute_improvements ---
 
+
 class TestComputeImprovements:
     def test_improvement_calculated_correctly(self):
         full = _passing_metric()  # faithfulness=0.90
-        base = MetricResult(faithfulness=0.72, answer_relevancy=0.68, context_recall=0.61, sample_count=3, passed=False)
+        base = MetricResult(
+            faithfulness=0.72,
+            answer_relevancy=0.68,
+            context_recall=0.61,
+            sample_count=3,
+            passed=False,
+        )
         imps = _compute_improvements(full, base)
         assert imps["faithfulness"] == pytest.approx(25.0, rel=0.01)
 
     def test_zero_baseline_returns_zero_improvement(self):
         full = _passing_metric()
-        base = MetricResult(faithfulness=0.0, answer_relevancy=0.0, context_recall=0.0, sample_count=3, passed=False)
+        base = MetricResult(
+            faithfulness=0.0,
+            answer_relevancy=0.0,
+            context_recall=0.0,
+            sample_count=3,
+            passed=False,
+        )
         imps = _compute_improvements(full, base)
         assert imps["faithfulness"] == 0.0
 
 
 # --- _determine_verdict ---
+
 
 class TestDetermineVerdict:
     def test_pass_when_thresholds_met_and_improvement_sufficient(self):
@@ -183,6 +226,7 @@ class TestDetermineVerdict:
 
 
 # --- Redis non-fatal ---
+
 
 class TestRedisCaching:
     def test_redis_read_failure_is_non_fatal(self):
@@ -210,10 +254,13 @@ class TestRedisCaching:
                 scorer=FakeRAGScorer(),
                 redis_pool=mock_pool,
             )
-            harness._write_cache("some-key", EvalResult(
-                full_system=_passing_metric(),
-                baseline=_failing_metric(),
-                improvements_pct={},
-                verdict="PASS",
-                dataset_size=3,
-            ))
+            harness._write_cache(
+                "some-key",
+                EvalResult(
+                    full_system=_passing_metric(),
+                    baseline=_failing_metric(),
+                    improvements_pct={},
+                    verdict="PASS",
+                    dataset_size=3,
+                ),
+            )

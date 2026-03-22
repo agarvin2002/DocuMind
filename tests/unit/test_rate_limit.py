@@ -34,6 +34,7 @@ from core.throttles import (
 # Constants
 # ---------------------------------------------------------------------------
 
+
 class TestRateLimitConstants:
     def test_analysis_create_limit_is_10(self):
         assert RATE_LIMIT_ANALYSIS_CREATE == 10
@@ -54,6 +55,7 @@ class TestRateLimitConstants:
 # ---------------------------------------------------------------------------
 # RateLimiter — is_allowed() via mocked Lua script
 # ---------------------------------------------------------------------------
+
 
 class TestRateLimiter:
     def _make_limiter(self) -> RateLimiter:
@@ -99,7 +101,7 @@ class TestRateLimiter:
         limiter = self._make_limiter()
         # First call: allowed; second call: denied
         limiter._script.side_effect = [
-            [1, 1, 0],   # key_a allowed
+            [1, 1, 0],  # key_a allowed
             [0, 5, 3000],  # key_b denied
         ]
         allowed_a, _ = limiter.is_allowed("key_a", limit=10)
@@ -111,6 +113,7 @@ class TestRateLimiter:
 # ---------------------------------------------------------------------------
 # Throttle classes — class attributes
 # ---------------------------------------------------------------------------
+
 
 class TestThrottleClasses:
     def test_analysis_create_throttle_rate(self):
@@ -135,13 +138,19 @@ class TestThrottleClasses:
         assert len(scopes) == 4
 
     def test_all_throttle_classes_extend_base(self):
-        for cls in [AnalysisCreateThrottle, QueryAskThrottle, DocumentUploadThrottle, QuerySearchThrottle]:
+        for cls in [
+            AnalysisCreateThrottle,
+            QueryAskThrottle,
+            DocumentUploadThrottle,
+            QuerySearchThrottle,
+        ]:
             assert issubclass(cls, _APIKeyRateThrottle)
 
 
 # ---------------------------------------------------------------------------
 # Throttle — allow_request() and wait()
 # ---------------------------------------------------------------------------
+
 
 class TestAPIKeyRateThrottle:
     def _make_request(self, key_hash: str = "abc123") -> MagicMock:

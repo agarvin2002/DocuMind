@@ -10,8 +10,8 @@ AGENT_SUB_QUESTION_MIN: int = 2
 AGENT_SUB_QUESTION_MAX: int = 4
 
 # Retrieval chunk counts
-AGENT_RETRIEVAL_K: int = 5      # chunks per sub-question (multi-hop)
-AGENT_COMPARISON_K: int = 8     # chunks per document (comparison / contradiction)
+AGENT_RETRIEVAL_K: int = 5  # chunks per sub-question (multi-hop)
+AGENT_COMPARISON_K: int = 8  # chunks per document (comparison / contradiction)
 
 # LLM generation limits
 # Sized for local Ollama (qwen2.5:3b ≈ 9 tok/s):
@@ -19,8 +19,8 @@ AGENT_COMPARISON_K: int = 8     # chunks per document (comparison / contradictio
 #   safely within AGENT_LLM_TIMEOUT_SECONDS=200. Truncation causes Instructor
 #   to retry, and retry prompts cause models to hallucinate garbage.
 # Production OpenAI is 200 tok/s, so these limits are never approached there.
-AGENT_SYNTHESIS_MAX_TOKENS: int = 1000   # final synthesis answer
-AGENT_SUBQUERY_MAX_TOKENS: int = 1000    # per-sub-question answer
+AGENT_SYNTHESIS_MAX_TOKENS: int = 1000  # final synthesis answer
+AGENT_SUBQUERY_MAX_TOKENS: int = 1000  # per-sub-question answer
 
 # Planning step token limits — smaller because outputs are short structured JSON,
 # not prose. Classifier returns a 3-field schema; decomposer returns a list of strings.
@@ -45,5 +45,5 @@ AGENT_DECOMPOSE_CACHE_PREFIX: str = "documind:agent:decompose:v1:"
 AGENT_JOB_RESULT_CACHE_PREFIX: str = "documind:agent:result:v1:"
 
 # Redis cache TTLs (seconds)
-AGENT_CACHE_TTL: int = 3600        # classify + decompose results (1 hour)
-AGENT_JOB_RESULT_TTL: int = 3600   # completed job result (1 hour)
+AGENT_CACHE_TTL: int = 3600  # classify + decompose results (1 hour)
+AGENT_JOB_RESULT_TTL: int = 3600  # completed job result (1 hour)

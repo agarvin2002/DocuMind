@@ -72,4 +72,6 @@ def run_analysis_job(self, job_id_str: str) -> None:
         mark_job_failed(job, str(exc))
     except Exception as exc:
         mark_job_failed(job, f"Unexpected error: {exc}")
-        logger.exception("run_analysis_job_unexpected_error", extra={"job_id": job_id_str})
+        logger.exception(
+            "run_analysis_job_unexpected_error", extra={"job_id": job_id_str}
+        )

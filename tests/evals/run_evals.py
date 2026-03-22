@@ -98,7 +98,9 @@ def _check_db() -> None:
         connection.ensure_connection()
     except OperationalError as exc:
         print(f"ERROR: Database is not reachable — {exc}", file=sys.stderr)
-        print("Ensure Docker services are running: docker compose up -d", file=sys.stderr)
+        print(
+            "Ensure Docker services are running: docker compose up -d", file=sys.stderr
+        )
         sys.exit(2)
 
 
@@ -110,7 +112,10 @@ def _get_or_ingest_document(title: str) -> uuid.UUID:
     """
     existing = Document.objects.filter(title=title).order_by("-created_at").first()
     if existing and existing.status == "ready":
-        logger.info("Document already ingested", extra={"title": title, "document_id": str(existing.id)})
+        logger.info(
+            "Document already ingested",
+            extra={"title": title, "document_id": str(existing.id)},
+        )
         return existing.id
 
     pdf_path = _DOCUMENT_TITLE_TO_PDF.get(title)
@@ -147,7 +152,10 @@ def _get_or_ingest_document(title: str) -> uuid.UUID:
             sys.exit(2)
         time.sleep(_INGESTION_POLL_INTERVAL_SEC)
 
-    print(f"ERROR: Ingestion timed out after {_INGESTION_TIMEOUT_SEC}s for '{title}'", file=sys.stderr)
+    print(
+        f"ERROR: Ingestion timed out after {_INGESTION_TIMEOUT_SEC}s for '{title}'",
+        file=sys.stderr,
+    )
     sys.exit(2)
 
 
@@ -188,10 +196,16 @@ def _print_summary(result: "EvalResult") -> None:  # noqa: F821
     print(f"  Verdict: {result.verdict}   (dataset: {result.dataset_size} samples)")
     print("=" * 60)
     print(f"  {'Metric':<22} {'Full System':>12} {'Baseline':>10} {'Improvement':>12}")
-    print(f"  {'-'*22} {'-'*12} {'-'*10} {'-'*12}")
-    print(f"  {'Faithfulness':<22} {fs.faithfulness:>12.3f} {bl.faithfulness:>10.3f} {imp.get('faithfulness', 0.0):>+11.1f}%")
-    print(f"  {'Answer Relevancy':<22} {fs.answer_relevancy:>12.3f} {bl.answer_relevancy:>10.3f} {imp.get('answer_relevancy', 0.0):>+11.1f}%")
-    print(f"  {'Context Recall':<22} {fs.context_recall:>12.3f} {bl.context_recall:>10.3f} {imp.get('context_recall', 0.0):>+11.1f}%")
+    print(f"  {'-' * 22} {'-' * 12} {'-' * 10} {'-' * 12}")
+    print(
+        f"  {'Faithfulness':<22} {fs.faithfulness:>12.3f} {bl.faithfulness:>10.3f} {imp.get('faithfulness', 0.0):>+11.1f}%"
+    )
+    print(
+        f"  {'Answer Relevancy':<22} {fs.answer_relevancy:>12.3f} {bl.answer_relevancy:>10.3f} {imp.get('answer_relevancy', 0.0):>+11.1f}%"
+    )
+    print(
+        f"  {'Context Recall':<22} {fs.context_recall:>12.3f} {bl.context_recall:>10.3f} {imp.get('context_recall', 0.0):>+11.1f}%"
+    )
     print("=" * 60)
     print()
 
@@ -226,7 +240,9 @@ def main() -> None:
         provider=getattr(django_settings, "RAGAS_JUDGE_PROVIDER", "openai"),
         openai_model=getattr(django_settings, "RAGAS_LLM_MODEL", RAGAS_LLM_MODEL),
         ollama_model=getattr(django_settings, "RAGAS_OLLAMA_MODEL", RAGAS_OLLAMA_MODEL),
-        ollama_base_url=getattr(django_settings, "OLLAMA_BASE_URL", RAGAS_OLLAMA_BASE_URL),
+        ollama_base_url=getattr(
+            django_settings, "OLLAMA_BASE_URL", RAGAS_OLLAMA_BASE_URL
+        ),
     )
 
     # Build harness (no Redis pool in this runner — keep it dependency-light)

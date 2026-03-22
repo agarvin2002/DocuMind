@@ -45,7 +45,9 @@ from query.services import execute_search  # noqa: E402
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Retrieval Precision@K benchmark")
-    parser.add_argument("--k", type=int, default=5, help="Number of chunks to retrieve (default: 5)")
+    parser.add_argument(
+        "--k", type=int, default=5, help="Number of chunks to retrieve (default: 5)"
+    )
     parser.add_argument("--dataset-path", default=EVAL_DATASET_PATH)
     parser.add_argument("--output-dir", default="eval_reports")
     return parser.parse_args()
@@ -55,7 +57,10 @@ def _check_db() -> None:
     try:
         connection.ensure_connection()
     except OperationalError as exc:
-        logger.error("Database unreachable", extra={"error": str(exc), "error_type": type(exc).__name__})
+        logger.error(
+            "Database unreachable",
+            extra={"error": str(exc), "error_type": type(exc).__name__},
+        )
         print(f"ERROR: Database unreachable — {exc}", file=sys.stderr)
         sys.exit(2)
 
@@ -106,7 +111,9 @@ def _precision_at_k(
         try:
             hybrid_chunks = execute_search(sample.question, doc_id, k)
             hybrid_relevant = sum(
-                1 for c in hybrid_chunks if _is_relevant(c.child_text, sample.ground_truth)
+                1
+                for c in hybrid_chunks
+                if _is_relevant(c.child_text, sample.ground_truth)
             )
             hybrid_hits += hybrid_relevant / k
         except Exception:  # noqa: BLE001
@@ -117,7 +124,9 @@ def _precision_at_k(
             embedding = embedder.embed_single(sample.question)
             vector_chunks = vector_search_chunks(embedding, doc_id, k)
             vector_relevant = sum(
-                1 for c in vector_chunks if _is_relevant(c.child_text, sample.ground_truth)
+                1
+                for c in vector_chunks
+                if _is_relevant(c.child_text, sample.ground_truth)
             )
             vector_hits += vector_relevant / k
         except Exception:  # noqa: BLE001
@@ -129,7 +138,9 @@ def _precision_at_k(
     return hybrid_hits / evaluated, vector_hits / evaluated, evaluated
 
 
-def _save_results(hybrid: float, vector: float, k: int, evaluated: int, output_dir: str) -> Path:
+def _save_results(
+    hybrid: float, vector: float, k: int, evaluated: int, output_dir: str
+) -> Path:
     improvement_pct = ((hybrid - vector) / vector * 100) if vector > 0 else 0.0
     payload = {
         "run_at": datetime.now(timezone.utc).isoformat(),
@@ -160,7 +171,10 @@ def main() -> None:
 
     doc_ids = _resolve_doc_ids()
     if not doc_ids:
-        print("ERROR: No ready documents found. Run: uv run python tests/evals/run_evals.py --dry-run", file=sys.stderr)
+        print(
+            "ERROR: No ready documents found. Run: uv run python tests/evals/run_evals.py --dry-run",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     print(f"Found {len(doc_ids)} ready document(s): {', '.join(doc_ids)}")

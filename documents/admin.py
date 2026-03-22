@@ -13,7 +13,14 @@ from documents.models import Document, DocumentChunk
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
     # Columns shown in the list view
-    list_display = ["title", "status", "file_type", "file_size", "chunk_count", "created_at"]
+    list_display = [
+        "title",
+        "status",
+        "file_type",
+        "file_size",
+        "chunk_count",
+        "created_at",
+    ]
     # Filters in the right sidebar
     list_filter = ["status", "file_type"]
     # Search bar (searches these fields)

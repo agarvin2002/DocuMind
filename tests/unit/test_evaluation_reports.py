@@ -12,19 +12,37 @@ from evaluation.reports import (
 
 # --- helpers ---
 
+
 def _make_result(verdict: str = "PASS") -> EvalResult:
-    full = MetricResult(faithfulness=0.90, answer_relevancy=0.85, context_recall=0.80, sample_count=10, passed=True)
-    base = MetricResult(faithfulness=0.72, answer_relevancy=0.68, context_recall=0.61, sample_count=10, passed=False)
+    full = MetricResult(
+        faithfulness=0.90,
+        answer_relevancy=0.85,
+        context_recall=0.80,
+        sample_count=10,
+        passed=True,
+    )
+    base = MetricResult(
+        faithfulness=0.72,
+        answer_relevancy=0.68,
+        context_recall=0.61,
+        sample_count=10,
+        passed=False,
+    )
     return EvalResult(
         full_system=full,
         baseline=base,
-        improvements_pct={"faithfulness": 25.0, "answer_relevancy": 25.0, "context_recall": 31.1},
+        improvements_pct={
+            "faithfulness": 25.0,
+            "answer_relevancy": 25.0,
+            "context_recall": 31.1,
+        },
         verdict=verdict,
         dataset_size=10,
     )
 
 
 # --- generate_json_report ---
+
 
 class TestGenerateJsonReport:
     def test_output_is_valid_json(self):
@@ -36,7 +54,15 @@ class TestGenerateJsonReport:
     def test_contains_all_top_level_keys(self):
         result = _make_result()
         parsed = json.loads(generate_json_report(result))
-        for key in ("run_at", "verdict", "dataset_size", "full_system", "baseline", "improvements_pct", "thresholds"):
+        for key in (
+            "run_at",
+            "verdict",
+            "dataset_size",
+            "full_system",
+            "baseline",
+            "improvements_pct",
+            "thresholds",
+        ):
             assert key in parsed, f"Missing key: {key}"
 
     def test_verdict_matches_result(self):
@@ -51,6 +77,7 @@ class TestGenerateJsonReport:
 
 
 # --- generate_markdown_report ---
+
 
 class TestGenerateMarkdownReport:
     def test_contains_verdict(self):
@@ -69,6 +96,7 @@ class TestGenerateMarkdownReport:
 
 
 # --- save_report ---
+
 
 class TestSaveReport:
     def test_returns_two_paths(self):
