@@ -22,6 +22,7 @@ from analysis.models import AnalysisJob
 from analysis.selectors import get_cached_result, get_job_by_id
 from analysis.serializers import AnalysisJobSerializer, AnalysisRequestSerializer
 from analysis.services import create_analysis_job, dispatch_analysis_task
+from core.throttles import AnalysisCreateThrottle
 from documents.exceptions import DocumentNotFoundError
 from documents.selectors import get_document_by_id
 
@@ -37,6 +38,8 @@ class AnalysisJobCreateView(APIView):
 
     The client should poll GET /api/v1/analysis/{job_id}/ until status=complete.
     """
+
+    throttle_classes = [AnalysisCreateThrottle]
 
     def post(self, request: Request) -> Response:
         # Step 1: validate the request body.

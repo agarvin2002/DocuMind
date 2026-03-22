@@ -18,6 +18,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.throttles import QueryAskThrottle, QuerySearchThrottle
 from documents.exceptions import DocumentNotFoundError
 from query.exceptions import ModelNotAvailableError, NoRelevantChunksError
 from query.serializers import (
@@ -38,6 +39,8 @@ class SearchView(APIView):
     Accepts a query string and document ID, runs the full retrieval pipeline,
     and returns a ranked list of the most relevant text chunks.
     """
+
+    throttle_classes = [QuerySearchThrottle]
 
     def post(self, request: Request) -> Response:
         # Step 1: validate the request body.
@@ -86,6 +89,9 @@ class AskView(APIView):
         event: done
         data: [DONE]           ← signals the client to close the connection
     """
+
+    throttle_classes = [QueryAskThrottle]
+
     def post(self, request: Request) -> StreamingHttpResponse | Response:
         # Step 1: validate the request body.
         serializer = AskRequestSerializer(data=request.data)
