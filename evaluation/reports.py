@@ -87,7 +87,10 @@ def generate_markdown_report(result: "EvalResult") -> str:  # noqa: F821
     return "\n".join(lines)
 
 
-def save_report(result: "EvalResult", output_dir: str = "eval_reports") -> tuple[Path, Path]:  # noqa: F821
+def save_report(
+    result: "EvalResult",  # noqa: F821
+    output_dir: str = "eval_reports",
+) -> tuple[Path, Path]:
     """Save JSON and Markdown reports to output_dir.
 
     Creates the directory if it does not exist.
@@ -105,6 +108,10 @@ def save_report(result: "EvalResult", output_dir: str = "eval_reports") -> tuple
 
     logger.info(
         "Eval reports saved",
-        extra={"json_path": str(json_path), "md_path": str(md_path), "verdict": result.verdict},
+        extra={
+            "json_path": str(json_path),
+            "md_path": str(md_path),
+            "verdict": result.verdict,
+        },
     )
     return json_path, md_path

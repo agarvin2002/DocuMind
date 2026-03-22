@@ -19,7 +19,9 @@ _PROMPTS: dict[str, str] = {
 def get_system_prompt(version: str = PROMPT_VERSION) -> str:
     """Return the system prompt for the given version."""
     if version not in _PROMPTS:
-        raise ValueError(f"Unknown prompt version: {version!r}. Available: {list(_PROMPTS)}")
+        raise ValueError(
+            f"Unknown prompt version: {version!r}. Available: {list(_PROMPTS)}"
+        )
     return _PROMPTS[version]
 
 

@@ -38,7 +38,9 @@ class MetricResult:
     passed: bool
 
 
-def passes_thresholds(faithfulness: float, answer_relevancy: float, context_recall: float) -> bool:
+def passes_thresholds(
+    faithfulness: float, answer_relevancy: float, context_recall: float
+) -> bool:
     """Return True only if all three scores clear the thresholds in constants.py."""
     return (
         faithfulness >= FAITHFULNESS_THRESHOLD
@@ -71,9 +73,7 @@ def compute_ragas_metrics(
     except MetricComputeError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise MetricComputeError(
-            f"Scorer raised an unexpected error: {exc}"
-        ) from exc
+        raise MetricComputeError(f"Scorer raised an unexpected error: {exc}") from exc
 
     faithfulness = float(scores.get(_FAITHFULNESS_KEY, 0.0))
     answer_relevancy = float(scores.get(_ANSWER_RELEVANCY_KEY, 0.0))
@@ -122,7 +122,12 @@ class RagasScorer:
 
         logger.info(
             "RagasScorer initialised",
-            extra={"provider": self._provider, "model": self._ollama_model if self._provider == "ollama" else self._openai_model},
+            extra={
+                "provider": self._provider,
+                "model": self._ollama_model
+                if self._provider == "ollama"
+                else self._openai_model,
+            },
         )
 
     def _build_judge_llm(self):
@@ -209,6 +214,4 @@ class RagasScorer:
         except MetricComputeError:
             raise
         except Exception as exc:  # noqa: BLE001
-            raise MetricComputeError(
-                f"RAGAS evaluation failed: {exc}"
-            ) from exc
+            raise MetricComputeError(f"RAGAS evaluation failed: {exc}") from exc

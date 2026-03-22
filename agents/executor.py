@@ -67,13 +67,17 @@ def _build_executor() -> "AgentExecutor":
             model=settings.OLLAMA_MODEL,
             base_url=settings.OLLAMA_BASE_URL,
         )
-        logger.info("agent_executor_using_ollama", extra={"model": settings.OLLAMA_MODEL})
+        logger.info(
+            "agent_executor_using_ollama", extra={"model": settings.OLLAMA_MODEL}
+        )
     else:
         structured_llm = StructuredLLMClient(
             api_key=settings.OPENAI_API_KEY,
             model=settings.OPENAI_MODEL,
         )
-        logger.info("agent_executor_using_openai", extra={"model": settings.OPENAI_MODEL})
+        logger.info(
+            "agent_executor_using_openai", extra={"model": settings.OPENAI_MODEL}
+        )
     planner = QueryPlanner(structured_llm=structured_llm)
     retrieval_tool = RetrievalTool()
     gen_tool = GenerationTool(structured_llm=structured_llm)
