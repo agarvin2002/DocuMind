@@ -122,7 +122,9 @@ class TestStructuredLLMClient:
 
         # instructor is a local import inside _get_client — patch it in its own namespace
         with (
-            patch("instructor.from_openai", return_value=MagicMock()) as mock_from_openai,
+            patch(
+                "instructor.from_openai", return_value=MagicMock()
+            ) as mock_from_openai,
             patch("openai.OpenAI"),
         ):
             client._get_client()
@@ -135,7 +137,9 @@ class TestStructuredLLMClient:
         mock_inner = MagicMock()
 
         with (
-            patch("instructor.from_openai", return_value=mock_inner) as mock_from_openai,
+            patch(
+                "instructor.from_openai", return_value=mock_inner
+            ) as mock_from_openai,
             patch("openai.OpenAI"),
         ):
             first = client._get_client()

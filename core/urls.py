@@ -25,7 +25,9 @@ urlpatterns = [
     # Schema and docs are open — no API key needed for portfolio visibility.
     path(
         "api/schema/",
-        SpectacularAPIView.as_view(authentication_classes=[], permission_classes=[AllowAny]),
+        SpectacularAPIView.as_view(
+            authentication_classes=[], permission_classes=[AllowAny]
+        ),
         name="schema",
     ),
     path(

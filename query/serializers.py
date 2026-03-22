@@ -76,5 +76,3 @@ class AskRequestSerializer(serializers.Serializer):
             "Omit or set null to use the auto-fallback chain."
         ),
     )
-
-

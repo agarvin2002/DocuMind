@@ -24,7 +24,7 @@ RAGAS_JUDGE_TEMPERATURE: float = 0.0  # deterministic scoring, not creative
 RAGAS_JUDGE_MAX_TOKENS: int = 1024
 
 # Retrieval — both systems use the same k so the comparison is fair.
-EVAL_SYSTEM_K: int = 5    # chunks returned by full hybrid pipeline
+EVAL_SYSTEM_K: int = 5  # chunks returned by full hybrid pipeline
 EVAL_BASELINE_K: int = 5  # chunks returned by naive vector-only baseline
 
 # Concurrent sample evaluation — same ThreadPoolExecutor pattern as retrieval/pipeline.py.

@@ -9,18 +9,22 @@ from tests.fakes import FakeStructuredLLMClient
 
 # --- shared helpers ---
 
+
 def _make_doc_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
 # --- FullSystemAdapter ---
 
+
 class TestFullSystemAdapter:
     def test_returns_tuple_of_str_and_list(self):
         llm = FakeStructuredLLMClient()
         adapter = FullSystemAdapter(llm=llm)
 
-        with patch.object(adapter, "answer", return_value=("generated answer", ["chunk 1", "chunk 2"])):
+        with patch.object(
+            adapter, "answer", return_value=("generated answer", ["chunk 1", "chunk 2"])
+        ):
             answer, contexts = adapter.answer("What is RAG?", _make_doc_id(), k=3)
 
         assert isinstance(answer, str)
@@ -58,6 +62,7 @@ class TestFullSystemAdapter:
 
 
 # --- NaiveBaselineAdapter ---
+
 
 class TestNaiveBaselineAdapter:
     def test_returns_tuple_of_str_and_list(self):

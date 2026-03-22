@@ -9,50 +9,88 @@ from pgvector.django import VectorExtension
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         # Must run before any vector column is created.
         VectorExtension(),
-
         migrations.CreateModel(
-            name='Document',
+            name="Document",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('title', models.CharField(max_length=500)),
-                ('file', models.FileField(upload_to='documents/%Y/%m/')),
-                ('original_filename', models.CharField(max_length=500)),
-                ('file_type', models.CharField(blank=True, max_length=50)),
-                ('file_size', models.PositiveBigIntegerField(default=0)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('processing', 'Processing'), ('ready', 'Ready'), ('failed', 'Failed')], db_index=True, default='pending', max_length=20)),
-                ('error_message', models.TextField(blank=True)),
-                ('chunk_count', models.PositiveIntegerField(default=0)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("title", models.CharField(max_length=500)),
+                ("file", models.FileField(upload_to="documents/%Y/%m/")),
+                ("original_filename", models.CharField(max_length=500)),
+                ("file_type", models.CharField(blank=True, max_length=50)),
+                ("file_size", models.PositiveBigIntegerField(default=0)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("processing", "Processing"),
+                            ("ready", "Ready"),
+                            ("failed", "Failed"),
+                        ],
+                        db_index=True,
+                        default="pending",
+                        max_length=20,
+                    ),
+                ),
+                ("error_message", models.TextField(blank=True)),
+                ("chunk_count", models.PositiveIntegerField(default=0)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='DocumentChunk',
+            name="DocumentChunk",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('chunk_index', models.PositiveIntegerField()),
-                ('child_text', models.TextField()),
-                ('parent_text', models.TextField()),
-                ('page_number', models.PositiveIntegerField(default=0)),
-                ('embedding', pgvector.django.vector.VectorField(blank=True, dimensions=384, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='chunks', to='documents.document')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("chunk_index", models.PositiveIntegerField()),
+                ("child_text", models.TextField()),
+                ("parent_text", models.TextField()),
+                ("page_number", models.PositiveIntegerField(default=0)),
+                (
+                    "embedding",
+                    pgvector.django.vector.VectorField(
+                        blank=True, dimensions=384, null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "document",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="chunks",
+                        to="documents.document",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['document', 'chunk_index'],
-                'unique_together': {('document', 'chunk_index')},
+                "ordering": ["document", "chunk_index"],
+                "unique_together": {("document", "chunk_index")},
             },
         ),
     ]

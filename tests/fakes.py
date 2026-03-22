@@ -17,7 +17,9 @@ class FakeLLMProvider:
     Pass tokens= for a successful stream, should_fail=True to raise on every call.
     """
 
-    def __init__(self, tokens: list[str] | None = None, should_fail: bool = False) -> None:
+    def __init__(
+        self, tokens: list[str] | None = None, should_fail: bool = False
+    ) -> None:
         self._tokens = tokens or ["Hello", " world"]
         self._should_fail = should_fail
         self.call_count = 0
@@ -84,7 +86,9 @@ class FakeStructuredLLMClient:
                 sub_questions=["sub q 1", "sub q 2"], reasoning="fake"
             )
         if response_model is SynthesizedAnswer:
-            return SynthesizedAnswer(answer="fake synthesized answer", key_points=["point 1"])
+            return SynthesizedAnswer(
+                answer="fake synthesized answer", key_points=["point 1"]
+            )
         # Fallback: try to construct with no args (works for simple models)
         return response_model()
 
@@ -162,7 +166,10 @@ class FakeRAGSystem:
         should_fail: bool = False,
     ) -> None:
         self._answer = answer
-        self._contexts = contexts or ["fake context chunk one", "fake context chunk two"]
+        self._contexts = contexts or [
+            "fake context chunk one",
+            "fake context chunk two",
+        ]
         self.should_fail = should_fail
         self.call_count = 0
 

@@ -21,7 +21,11 @@ from analysis.tasks import run_analysis_job
 def _create_pending_job() -> AnalysisJob:
     return AnalysisJob.objects.create(
         workflow_type=AnalysisJob.WorkflowType.MULTI_HOP,
-        input_data={"question": "test", "document_ids": [], "workflow_type": "multi_hop"},
+        input_data={
+            "question": "test",
+            "document_ids": [],
+            "workflow_type": "multi_hop",
+        },
     )
 
 
@@ -49,7 +53,9 @@ class TestRunAnalysisJobTask:
         from analysis.exceptions import AgentError
 
         job = _create_pending_job()
-        with patch("agents.executor.run_analysis", side_effect=AgentError("LLM failed")):
+        with patch(
+            "agents.executor.run_analysis", side_effect=AgentError("LLM failed")
+        ):
             run_analysis_job(str(job.id))
 
         job.refresh_from_db()

@@ -41,7 +41,6 @@ class TestAgentPrompts:
     def test_all_prompts_mention_documind_or_have_role(self):
         # Every prompt should establish a role for the LLM
         for key, prompt in AGENT_PROMPTS.items():
-            assert any(
-                word in prompt.lower()
-                for word in ("you are", "documind")
-            ), f"Prompt '{key}' does not establish an LLM role"
+            assert any(word in prompt.lower() for word in ("you are", "documind")), (
+                f"Prompt '{key}' does not establish an LLM role"
+            )

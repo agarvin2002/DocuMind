@@ -26,6 +26,7 @@ from analysis.services import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_job(**kwargs) -> AnalysisJob:
     defaults = {
         "workflow_type": AnalysisJob.WorkflowType.MULTI_HOP,
@@ -38,6 +39,7 @@ def _make_job(**kwargs) -> AnalysisJob:
 # ---------------------------------------------------------------------------
 # Services
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestCreateAnalysisJob:
@@ -131,7 +133,9 @@ class TestCacheJobResult:
         assert json.loads(call_args[0][1]) == {"answer": "42"}
 
     def test_redis_failure_is_non_fatal(self):
-        with patch("analysis.services.redis_lib.Redis", side_effect=Exception("Redis down")):
+        with patch(
+            "analysis.services.redis_lib.Redis", side_effect=Exception("Redis down")
+        ):
             # Must not raise
             _cache_job_result("job-456", {"answer": "42"})
 
@@ -139,6 +143,7 @@ class TestCacheJobResult:
 # ---------------------------------------------------------------------------
 # Selectors
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestGetJobById:
@@ -168,7 +173,9 @@ class TestGetCachedResult:
         assert result is None
 
     def test_returns_none_on_redis_error(self):
-        with patch("analysis.selectors.redis_lib.Redis", side_effect=Exception("Redis down")):
+        with patch(
+            "analysis.selectors.redis_lib.Redis", side_effect=Exception("Redis down")
+        ):
             result = get_cached_result("job-123")
         assert result is None
 
