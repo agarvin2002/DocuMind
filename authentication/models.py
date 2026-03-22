@@ -11,6 +11,7 @@ Key lifecycle:
 import hashlib
 import secrets
 import uuid
+from datetime import timedelta
 
 from django.db import models
 from django.utils import timezone
@@ -58,5 +59,10 @@ class APIKey(models.Model):
         """
         Updates last_used_at without a full model save.
         Uses UPDATE on a single column to avoid signal overhead on every request.
+        Skips the DB write if last_used_at was updated within the last 5 minutes
+        — the in-memory value is already set from the auth lookup, so no extra
+        DB query is needed to make this check.
         """
+        if self.last_used_at and (timezone.now() - self.last_used_at) < timedelta(minutes=5):
+            return
         APIKey.objects.filter(pk=self.pk).update(last_used_at=timezone.now())

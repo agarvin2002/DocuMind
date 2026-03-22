@@ -65,7 +65,7 @@ class SemanticCache:
             if entry is None:
                 return None
 
-            logger.info(
+            logger.debug(
                 "Semantic cache hit",
                 extra={
                     "document_id": str(document_id),

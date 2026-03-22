@@ -56,7 +56,7 @@ class _APIKeyRateThrottle(BaseThrottle):
 
         if not allowed:
             self._retry_after = retry_after
-            logger.warning(
+            logger.info(
                 "Rate limit exceeded",
                 extra={
                     "scope": self.scope,
