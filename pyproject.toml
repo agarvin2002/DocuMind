@@ -28,6 +28,8 @@ dependencies = [
     "rank-bm25>=0.2",
     # Document parsing
     "pypdf>=4.0",
+    # Production WSGI server
+    "gunicorn>=22.0",
     # File storage — S3-compatible (MinIO locally, AWS S3 in production)
     "boto3>=1.34",
     "django-storages>=1.14",

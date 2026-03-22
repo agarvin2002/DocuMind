@@ -1,0 +1,34 @@
+version: 2
+updates:
+
+  # Python dependencies — opens a PR when any package in pyproject.toml has a newer version
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      # Batch all LLM provider updates into one PR — they tend to release together
+      llm-providers:
+        patterns:
+          - "openai"
+          - "anthropic"
+          - "instructor"
+          - "langchain*"
+          - "langgraph"
+          - "langsmith"
+
+  # GitHub Actions versions — keeps checkout, setup-uv, upload-artifact current
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
