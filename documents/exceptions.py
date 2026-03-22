@@ -28,3 +28,4 @@ class DocumentUploadError(StorageError):
 class UnsupportedFileTypeError(ProcessingError):
     """Raised when an uploaded file type is not supported (e.g. .exe, .zip)."""
     default_message = "File type is not supported."
+    code = "UNSUPPORTED_FILE_TYPE"
