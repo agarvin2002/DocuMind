@@ -74,8 +74,12 @@ class SemanticCache:
             )
             return entry.answer_json
 
-        except Exception:
-            logger.warning("Semantic cache lookup failed", exc_info=True)
+        except Exception as e:
+            logger.warning(
+                "Semantic cache lookup failed",
+                extra={"error_type": type(e).__name__},
+                exc_info=True,
+            )
             return None  # treat as a miss — LLM pipeline handles it
 
     def store(
@@ -104,5 +108,9 @@ class SemanticCache:
                 "Semantic cache entry stored",
                 extra={"document_id": str(document_id)},
             )
-        except Exception:
-            logger.warning("Semantic cache store failed", exc_info=True)
+        except Exception as e:
+            logger.warning(
+                "Semantic cache store failed",
+                extra={"error_type": type(e).__name__},
+                exc_info=True,
+            )

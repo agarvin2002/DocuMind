@@ -10,10 +10,10 @@ where we left off and what to do next.
 
 ## Current Status
 
-**Active Phase:** Phase 6 — Evaluation Framework
-**Phase Status:** COMPLETE — all tasks done, branch `feature/evaluation-framework` ready to merge to `main`
-**Last Updated:** 2026-03-21
-**Last Completed Task:** 6.14 GitHub Actions CI/eval workflows + 6.15 docs update. 354 tests passing. Full RAGAS evaluation pipeline complete.
+**Active Phase:** Phase 7 — Production Readiness
+**Phase Status:** COMPLETE — all tasks done, branch `feature/production-readiness` pushed; PR open → `main`
+**Last Updated:** 2026-03-22
+**Last Completed Task:** 7.6 Security audit — all 6 tasks complete. 450+ tests passing. API key auth, rate limiting, semantic caching, structured errors, README, and security audit all shipped.
 
 ---
 
@@ -185,14 +185,19 @@ where we left off and what to do next.
 
 ## Phase 7 Tasks — Production Readiness
 
-### Status: NOT STARTED
+### Status: COMPLETE ✓ (branch: feature/production-readiness)
 
-- [ ] **7.1** Implement API key authentication
-- [ ] **7.2** Implement rate limiting
-- [ ] **7.3** Implement semantic caching
-- [ ] **7.4** Add structured error handling to all routes
-- [ ] **7.5** Write README with demo, architecture diagram, benchmarks
-- [ ] **7.6** Final security audit (no secrets in code or git history)
+- [x] **7.1** Implement API key authentication — `authentication/` app, SHA-256 hashing, `create_api_key` command
+- [x] **7.2** Implement rate limiting — Redis ZSET sliding window, Lua script, 4 throttle tiers, fail-open
+- [x] **7.3** Implement semantic caching — pgvector cosine similarity, 7-day TTL, HNSW index, Protocol + FakeSemanticCache
+- [x] **7.4** Add structured error handling — `documind_exception_handler`, consistent `{error, code, request_id}` envelope
+- [x] **7.5** Write README — Mermaid diagram, 3-command quickstart, API reference table, benchmark targets, design decisions
+- [x] **7.6** Final security audit — no secrets in git history, no hardcoded keys, security headers confirmed
+
+### SHOULD_FIX (post-Phase 7 tech debt)
+- Remove manual try/except blocks in views — let `documind_exception_handler` handle all exceptions
+- `core/health.py` — version `"0.1.0"` hardcoded; should read from `importlib.metadata`
+- `documents/admin.py` — add `raw_id_fields = ["document"]` to `DocumentChunkAdmin`
 
 ---
 
@@ -231,6 +236,6 @@ None currently.
 3. Read DEV_COMMANDS.md to know how to start the project
 4. Begin Phase 7 — Production Readiness
 
-**Current branch:** feature/evaluation-framework
-**Pre-push checklist:** ruff clean ✓ | 354 unit tests green ✓ | manage.py check clean ✓
-**Next:** Open PR `feature/evaluation-framework` → `main`, then begin Phase 7 — Production Readiness
+**Current branch:** feature/production-readiness
+**Pre-push checklist:** ruff clean ✓ | 450+ unit tests green ✓ | manage.py check clean ✓
+**Next:** Merge PR `feature/production-readiness` → `main`. Phase 7 is complete — project is production-ready.
