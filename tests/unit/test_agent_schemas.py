@@ -64,7 +64,9 @@ class TestAgentSchemas:
         assert result.answer == "The answer is 42."
 
     def test_synthesized_answer_has_key_points(self):
-        obj = SynthesizedAnswer(answer="Final answer.", key_points=["Point 1", "Point 2"])
+        obj = SynthesizedAnswer(
+            answer="Final answer.", key_points=["Point 1", "Point 2"]
+        )
         assert len(obj.key_points) == 2
 
     def test_comparison_report_has_similarities_and_differences(self):

@@ -19,6 +19,7 @@ from analysis.models import AnalysisJob
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def client():
     import secrets
@@ -30,7 +31,9 @@ def client():
     # An unsaved APIKey() instance satisfies isinstance(request.auth, APIKey).
     # A unique key_hash per test prevents the rate limiter from sharing buckets
     # across tests (all would otherwise share key_hash="" which is the CharField default).
-    c.force_authenticate(token=APIKey(name="test-key", is_active=True, key_hash=secrets.token_hex(32)))
+    c.force_authenticate(
+        token=APIKey(name="test-key", is_active=True, key_hash=secrets.token_hex(32))
+    )
     return c
 
 
@@ -47,6 +50,7 @@ def _post_analysis(client, payload):
 # POST /api/v1/analysis/
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestAnalysisJobCreateView:
     def test_post_returns_202_with_job_id(self, client, valid_doc_id):
@@ -54,10 +58,13 @@ class TestAnalysisJobCreateView:
             patch("analysis.views.get_document_by_id"),
             patch("analysis.views.dispatch_analysis_task"),
         ):
-            resp = _post_analysis(client, {
-                "question": "What is the main topic?",
-                "document_ids": [valid_doc_id],
-            })
+            resp = _post_analysis(
+                client,
+                {
+                    "question": "What is the main topic?",
+                    "document_ids": [valid_doc_id],
+                },
+            )
         assert resp.status_code == 202
         assert "id" in resp.data
         assert resp.data["status"] == "pending"
@@ -73,25 +80,35 @@ class TestAnalysisJobCreateView:
         assert "document_ids" in resp.data
 
     def test_post_with_non_uuid_document_id_returns_400(self, client):
-        resp = _post_analysis(client, {
-            "question": "What?",
-            "document_ids": ["not-a-uuid"],
-        })
+        resp = _post_analysis(
+            client,
+            {
+                "question": "What?",
+                "document_ids": ["not-a-uuid"],
+            },
+        )
         assert resp.status_code == 400
 
     def test_post_with_more_than_10_document_ids_returns_400(self, client):
         ids = [str(uuid.uuid4()) for _ in range(11)]
-        resp = _post_analysis(client, {"question": "Compare these", "document_ids": ids})
+        resp = _post_analysis(
+            client, {"question": "Compare these", "document_ids": ids}
+        )
         assert resp.status_code == 400
 
     def test_post_with_nonexistent_document_id_returns_404(self, client, valid_doc_id):
         from documents.exceptions import DocumentNotFoundError
 
-        with patch("analysis.views.get_document_by_id", side_effect=DocumentNotFoundError()):
-            resp = _post_analysis(client, {
-                "question": "What?",
-                "document_ids": [valid_doc_id],
-            })
+        with patch(
+            "analysis.views.get_document_by_id", side_effect=DocumentNotFoundError()
+        ):
+            resp = _post_analysis(
+                client,
+                {
+                    "question": "What?",
+                    "document_ids": [valid_doc_id],
+                },
+            )
         assert resp.status_code == 404
         assert "detail" in resp.data
 
@@ -100,10 +117,13 @@ class TestAnalysisJobCreateView:
             patch("analysis.views.get_document_by_id"),
             patch("analysis.views.dispatch_analysis_task") as mock_dispatch,
         ):
-            _post_analysis(client, {
-                "question": "Summarise",
-                "document_ids": [valid_doc_id],
-            })
+            _post_analysis(
+                client,
+                {
+                    "question": "Summarise",
+                    "document_ids": [valid_doc_id],
+                },
+            )
         mock_dispatch.assert_called_once()
 
     def test_post_with_valid_workflow_type_stores_it(self, client, valid_doc_id):
@@ -111,23 +131,31 @@ class TestAnalysisJobCreateView:
             patch("analysis.views.get_document_by_id"),
             patch("analysis.views.dispatch_analysis_task"),
         ):
-            resp = _post_analysis(client, {
-                "question": "Compare",
-                "document_ids": [valid_doc_id],
-                "workflow_type": "comparison",
-            })
+            resp = _post_analysis(
+                client,
+                {
+                    "question": "Compare",
+                    "document_ids": [valid_doc_id],
+                    "workflow_type": "comparison",
+                },
+            )
         assert resp.status_code == 202
         assert resp.data["workflow_type"] == "comparison"
 
-    def test_post_defaults_to_multi_hop_when_workflow_type_omitted(self, client, valid_doc_id):
+    def test_post_defaults_to_multi_hop_when_workflow_type_omitted(
+        self, client, valid_doc_id
+    ):
         with (
             patch("analysis.views.get_document_by_id"),
             patch("analysis.views.dispatch_analysis_task"),
         ):
-            resp = _post_analysis(client, {
-                "question": "What are the risks?",
-                "document_ids": [valid_doc_id],
-            })
+            resp = _post_analysis(
+                client,
+                {
+                    "question": "What are the risks?",
+                    "document_ids": [valid_doc_id],
+                },
+            )
         assert resp.status_code == 202
         assert resp.data["workflow_type"] == "multi_hop"
 
@@ -135,6 +163,7 @@ class TestAnalysisJobCreateView:
 # ---------------------------------------------------------------------------
 # GET /api/v1/analysis/{job_id}/
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestAnalysisJobDetailView:
@@ -178,7 +207,11 @@ class TestAnalysisJobDetailView:
 
     def test_get_completed_job_served_from_cache(self, client):
         job_id = str(uuid.uuid4())
-        cached_response = {"id": job_id, "status": "complete", "result_data": {"final_answer": "cached"}}
+        cached_response = {
+            "id": job_id,
+            "status": "complete",
+            "result_data": {"final_answer": "cached"},
+        }
         with patch("analysis.views.get_cached_result", return_value=cached_response):
             resp = client.get(f"/api/v1/analysis/{job_id}/")
         assert resp.status_code == 200

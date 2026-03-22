@@ -105,7 +105,9 @@ class OpenAIProvider:
         except openai.RateLimitError as exc:
             raise AnswerGenerationError(f"OpenAI rate limit exceeded: {exc}") from exc
         except openai.BadRequestError as exc:
-            raise AnswerGenerationError(f"OpenAI bad request (context too long?): {exc}") from exc
+            raise AnswerGenerationError(
+                f"OpenAI bad request (context too long?): {exc}"
+            ) from exc
         except openai.APITimeoutError as exc:
             raise AnswerGenerationError(f"OpenAI request timed out: {exc}") from exc
         except openai.APIError as exc:
@@ -158,7 +160,9 @@ class AnthropicProvider:
             ) as stream:
                 yield from stream.text_stream
         except anthropic.RateLimitError as exc:
-            raise AnswerGenerationError(f"Anthropic rate limit exceeded: {exc}") from exc
+            raise AnswerGenerationError(
+                f"Anthropic rate limit exceeded: {exc}"
+            ) from exc
         except anthropic.BadRequestError as exc:
             raise AnswerGenerationError(f"Anthropic bad request: {exc}") from exc
         except anthropic.APITimeoutError as exc:
@@ -283,7 +287,9 @@ class OllamaProvider:
         if self._client is None:
             import openai
 
-            self._client = openai.OpenAI(base_url=self._base_url, api_key=OLLAMA_DUMMY_API_KEY)
+            self._client = openai.OpenAI(
+                base_url=self._base_url, api_key=OLLAMA_DUMMY_API_KEY
+            )
         return self._client
 
     @traceable(name="ollama_stream", run_type="llm")
@@ -386,5 +392,7 @@ class FallbackLLMClient:
             extra={"providers_tried": [type(p).__name__ for p in self._providers]},
         )
         if last_exc is None:
-            raise AnswerGenerationError("No providers were available to handle the request.")
+            raise AnswerGenerationError(
+                "No providers were available to handle the request."
+            )
         raise last_exc

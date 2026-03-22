@@ -32,14 +32,18 @@ class TestAnalysisExceptions:
     def test_exceptions_are_instantiable(self):
         assert str(AgentError()) == AgentError.default_message
         assert str(PlanningError()) == PlanningError.default_message
-        assert str(AnalysisJobNotFoundError()) == AnalysisJobNotFoundError.default_message
+        assert (
+            str(AnalysisJobNotFoundError()) == AnalysisJobNotFoundError.default_message
+        )
 
 
 class TestTaskNameConstants:
     def test_run_analysis_job_constant_exists(self):
         from core.task_names import RUN_ANALYSIS_JOB
+
         assert RUN_ANALYSIS_JOB == "analysis.tasks.run_analysis_job"
 
     def test_ingest_document_constant_unchanged(self):
         from core.task_names import INGEST_DOCUMENT
+
         assert INGEST_DOCUMENT == "documents.tasks.ingest_document"

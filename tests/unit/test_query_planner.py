@@ -26,7 +26,16 @@ class _FakeLLM:
         self.should_fail = should_fail
         self.call_count = 0
 
-    def complete(self, system_prompt, user_message, response_model, *, temperature, max_tokens, timeout):
+    def complete(
+        self,
+        system_prompt,
+        user_message,
+        response_model,
+        *,
+        temperature,
+        max_tokens,
+        timeout,
+    ):
         self.call_count += 1
         if self.should_fail:
             raise AnswerGenerationError("fake llm failure")
@@ -42,7 +51,9 @@ class _FakeLLM:
 
 
 def _make_planner(*, should_fail: bool = False):
-    return QueryPlanner(structured_llm=_FakeLLM(should_fail=should_fail)), _FakeLLM(should_fail=should_fail)
+    return QueryPlanner(structured_llm=_FakeLLM(should_fail=should_fail)), _FakeLLM(
+        should_fail=should_fail
+    )
 
 
 def _mock_redis_miss():
@@ -103,7 +114,9 @@ class TestQueryPlannerClassify:
     def test_classify_falls_back_to_llm_when_redis_errors(self):
         llm = _FakeLLM()
         planner = QueryPlanner(structured_llm=llm)
-        with patch("agents.query_planner.redis_lib.Redis", side_effect=Exception("Redis down")):
+        with patch(
+            "agents.query_planner.redis_lib.Redis", side_effect=Exception("Redis down")
+        ):
             result = planner.classify("What?", [uuid.uuid4()])
         assert isinstance(result, ComplexityClassification)
         assert llm.call_count == 1
@@ -119,7 +132,9 @@ class TestQueryPlannerDecompose:
         llm = _FakeLLM()
         planner = QueryPlanner(structured_llm=llm)
         with _mock_redis_miss():
-            result = planner.decompose("What are the main risks and their impacts?", n=2)
+            result = planner.decompose(
+                "What are the main risks and their impacts?", n=2
+            )
         assert isinstance(result, QueryDecomposition)
         assert len(result.sub_questions) == 2
 

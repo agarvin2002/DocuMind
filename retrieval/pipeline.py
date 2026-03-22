@@ -87,7 +87,11 @@ class RetrievalPipeline:
 
         logger.info(
             "Retrieval pipeline starting",
-            extra={"document_id": str(document_id), "k": k, "candidates_k": candidates_k},
+            extra={
+                "document_id": str(document_id),
+                "k": k,
+                "candidates_k": candidates_k,
+            },
         )
 
         embedding = self._embedder.embed_single(query)

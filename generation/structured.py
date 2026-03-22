@@ -46,12 +46,16 @@ class StructuredLLMClient:
     importing this module never triggers network activity or credential checks.
     """
 
-    def __init__(self, api_key: str, model: str, *, base_url: str | None = None) -> None:
+    def __init__(
+        self, api_key: str, model: str, *, base_url: str | None = None
+    ) -> None:
         self._api_key = api_key
         self._model = model
-        self._base_url = base_url  # None = use OpenAI default; set for Ollama/custom endpoints
-        self._client = None       # Instructor-patched client (lazy)
-        self._raw_client = None   # Plain OpenAI client for generate_text() (lazy)
+        self._base_url = (
+            base_url  # None = use OpenAI default; set for Ollama/custom endpoints
+        )
+        self._client = None  # Instructor-patched client (lazy)
+        self._raw_client = None  # Plain OpenAI client for generate_text() (lazy)
 
     def _get_client(self):
         """
@@ -134,7 +138,10 @@ class StructuredLLMClient:
             )
             return response.choices[0].message.content or ""
         except Exception as exc:
-            logger.error("structured_llm_generate_text_failed", extra={"model": self._model, "error": str(exc)})
+            logger.error(
+                "structured_llm_generate_text_failed",
+                extra={"model": self._model, "error": str(exc)},
+            )
             raise AnswerGenerationError(str(exc)) from exc
 
     @traceable(name="structured_llm_complete")

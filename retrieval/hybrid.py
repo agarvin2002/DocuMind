@@ -60,11 +60,15 @@ class HybridFusion:
         metadata: dict[str, ChunkSearchResult] = {}
 
         for rank, result in enumerate(vector_results, start=1):
-            rrf_scores[result.chunk_id] = rrf_scores.get(result.chunk_id, 0.0) + 1.0 / (self._k + rank)
+            rrf_scores[result.chunk_id] = rrf_scores.get(result.chunk_id, 0.0) + 1.0 / (
+                self._k + rank
+            )
             metadata[result.chunk_id] = result
 
         for rank, result in enumerate(keyword_results, start=1):
-            rrf_scores[result.chunk_id] = rrf_scores.get(result.chunk_id, 0.0) + 1.0 / (self._k + rank)
+            rrf_scores[result.chunk_id] = rrf_scores.get(result.chunk_id, 0.0) + 1.0 / (
+                self._k + rank
+            )
             # Only store metadata from keyword results if not already stored from vector results.
             if result.chunk_id not in metadata:
                 metadata[result.chunk_id] = result
@@ -72,7 +76,9 @@ class HybridFusion:
         # Build final results with updated RRF scores, sorted highest first.
         fused = [
             replace(metadata[chunk_id], score=score)
-            for chunk_id, score in sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+            for chunk_id, score in sorted(
+                rrf_scores.items(), key=lambda x: x[1], reverse=True
+            )
         ]
 
         logger.debug(

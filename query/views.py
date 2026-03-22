@@ -60,8 +60,12 @@ class SearchView(APIView):
         except NoRelevantChunksError as e:
             return Response({"detail": str(e)}, status=e.http_status_code)
         except RerankerError as e:
-            logger.error("Reranker failed during search", extra={"error_type": type(e).__name__})
-            return Response({"detail": "Search ranking failed. Please try again."}, status=500)
+            logger.error(
+                "Reranker failed during search", extra={"error_type": type(e).__name__}
+            )
+            return Response(
+                {"detail": "Search ranking failed. Please try again."}, status=500
+            )
 
         # Step 4: return the response.
         return Response(
@@ -105,7 +109,11 @@ class AskView(APIView):
 
         logger.info(
             "Ask request received",
-            extra={"document_id": str(document_id), "k": k, "model": model or "fallback"},
+            extra={
+                "document_id": str(document_id),
+                "k": k,
+                "model": model or "fallback",
+            },
         )
 
         # Step 2 & 3: initialise the generator, catch pre-stream errors.
@@ -125,7 +133,9 @@ class AskView(APIView):
             return Response({"detail": str(e)}, status=e.http_status_code)
         except RerankerError:
             logger.error("Reranker failed during ask retrieval")
-            return Response({"detail": "Retrieval ranking failed. Please try again."}, status=500)
+            return Response(
+                {"detail": "Retrieval ranking failed. Please try again."}, status=500
+            )
 
         # Step 4: stream the response.
         response = StreamingHttpResponse(
