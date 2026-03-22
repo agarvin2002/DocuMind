@@ -220,9 +220,7 @@ class TestIngestionPipeline:
         mock_embedder = MagicMock()
 
         with pytest.raises(ParseError):
-            pipeline = IngestionPipeline(
-                chunker=mock_chunker, embedder=mock_embedder
-            )
+            pipeline = IngestionPipeline(chunker=mock_chunker, embedder=mock_embedder)
             pipeline.run(
                 document_id=uuid.uuid4(),
                 file_obj=open(sample_pdf_path, "rb"),

@@ -63,6 +63,8 @@ class APIKey(models.Model):
         — the in-memory value is already set from the auth lookup, so no extra
         DB query is needed to make this check.
         """
-        if self.last_used_at and (timezone.now() - self.last_used_at) < timedelta(minutes=5):
+        if self.last_used_at and (timezone.now() - self.last_used_at) < timedelta(
+            minutes=5
+        ):
             return
         APIKey.objects.filter(pk=self.pk).update(last_used_at=timezone.now())

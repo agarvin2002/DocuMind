@@ -93,7 +93,9 @@ class NaiveBaselineAdapter:
 
             answer_text = self._llm.generate_text(
                 system_prompt=get_system_prompt(),
-                user_message=build_user_message(question, chunks, max_context_tokens=6000),
+                user_message=build_user_message(
+                    question, chunks, max_context_tokens=6000
+                ),
                 temperature=EVAL_GENERATION_TEMPERATURE,
                 max_tokens=EVAL_GENERATION_MAX_TOKENS,
                 timeout=EVAL_GENERATION_TIMEOUT_SECONDS,

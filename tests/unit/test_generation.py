@@ -117,8 +117,8 @@ class TestPromptBuilder:
         # Each chunk's parent_text is 8 chars = 2 tokens (chars / 4).
         # max_context_tokens=2 fits exactly the first chunk (2 tokens),
         # but not the second (2 + 2 = 4 > 2) → only [1] should appear.
-        chunk1 = _make_chunk("c1", parent_text="a" * 8)   # 2 tokens
-        chunk2 = _make_chunk("c2", parent_text="b" * 8)   # 2 tokens
+        chunk1 = _make_chunk("c1", parent_text="a" * 8)  # 2 tokens
+        chunk2 = _make_chunk("c2", parent_text="b" * 8)  # 2 tokens
         msg = build_user_message("query", [chunk1, chunk2], max_context_tokens=2)
         assert "[1]" in msg
         assert "[2]" not in msg
@@ -180,7 +180,9 @@ class TestFallbackLLMClient:
         p1 = FakeLLMProvider(tokens=["a", "b"])
         p2 = FakeLLMProvider(tokens=["c"])
         client = FallbackLLMClient(providers=[p1, p2])
-        tokens = list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
+        tokens = list(
+            client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+        )
         assert tokens == ["a", "b"]
         assert p2.call_count == 0
 
@@ -188,7 +190,9 @@ class TestFallbackLLMClient:
         p1 = FakeLLMProvider(should_fail=True)
         p2 = FakeLLMProvider(tokens=["fallback", " token"])
         client = FallbackLLMClient(providers=[p1, p2])
-        tokens = list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
+        tokens = list(
+            client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+        )
         assert tokens == ["fallback", " token"]
         assert p1.call_count == 1
         assert p2.call_count == 1
@@ -198,7 +202,9 @@ class TestFallbackLLMClient:
         p2 = FakeLLMProvider(should_fail=True)
         p3 = FakeLLMProvider(tokens=["third"])
         client = FallbackLLMClient(providers=[p1, p2, p3])
-        tokens = list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
+        tokens = list(
+            client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+        )
         assert tokens == ["third"]
         assert p3.call_count == 1
 
@@ -207,7 +213,11 @@ class TestFallbackLLMClient:
         p2 = FakeLLMProvider(should_fail=True)
         client = FallbackLLMClient(providers=[p1, p2])
         with pytest.raises(AnswerGenerationError):
-            list(client.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0))
+            list(
+                client.stream(
+                    "sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0
+                )
+            )
 
     def test_raises_value_error_with_empty_providers(self):
         with pytest.raises(ValueError, match="at least one provider"):
@@ -231,7 +241,9 @@ class TestBedrockProvider:
         )
         # Simulate NoCredentialsError coming from botocore
         with patch.object(provider, "_get_client") as mock_client:
-            mock_client.return_value.messages.stream.side_effect = Exception("NoCredentialsError")
+            mock_client.return_value.messages.stream.side_effect = Exception(
+                "NoCredentialsError"
+            )
             with pytest.raises(AnswerGenerationError):
                 list(
                     provider.stream(
@@ -259,7 +271,9 @@ class TestBedrockProvider:
                     )
                 )
 
-    def test_model_not_enabled_raises_answer_generation_error_with_helpful_message(self):
+    def test_model_not_enabled_raises_answer_generation_error_with_helpful_message(
+        self,
+    ):
         from generation.llm import BedrockProvider
 
         provider = BedrockProvider(
@@ -289,10 +303,12 @@ class TestOllamaProvider:
     def test_connection_error_raises_answer_generation_error_with_helpful_message(self):
         from generation.llm import OllamaProvider
 
-        provider = OllamaProvider(base_url="http://localhost:11434/v1", model="llama3.2")
+        provider = OllamaProvider(
+            base_url="http://localhost:11434/v1", model="llama3.2"
+        )
         with patch.object(provider, "_get_client") as mock_client:
-            mock_client.return_value.chat.completions.create.side_effect = ConnectionError(
-                "Connection refused"
+            mock_client.return_value.chat.completions.create.side_effect = (
+                ConnectionError("Connection refused")
             )
             with pytest.raises(AnswerGenerationError, match="not running"):
                 list(
@@ -306,12 +322,16 @@ class TestOllamaProvider:
 
         from generation.llm import OllamaProvider
 
-        provider = OllamaProvider(base_url="http://localhost:11434/v1", model="llama3.2")
+        provider = OllamaProvider(
+            base_url="http://localhost:11434/v1", model="llama3.2"
+        )
         with patch.object(provider, "_get_client") as mock_client:
-            mock_client.return_value.chat.completions.create.side_effect = openai.NotFoundError(
-                message="model not found",
-                response=MagicMock(status_code=404),
-                body={},
+            mock_client.return_value.chat.completions.create.side_effect = (
+                openai.NotFoundError(
+                    message="model not found",
+                    response=MagicMock(status_code=404),
+                    body={},
+                )
             )
             with pytest.raises(AnswerGenerationError, match="Pull it with"):
                 list(
@@ -428,7 +448,9 @@ class TestExecuteAsk:
         assert "fake provider failure" in error_events[0]
 
     def test_citation_markers_resolved_to_chunks(self):
-        chunk = _make_chunk("c-1", page_number=5, parent_text="The risk is significant.")
+        chunk = _make_chunk(
+            "c-1", page_number=5, parent_text="The risk is significant."
+        )
         with (
             patch("documents.selectors.get_document_by_id"),
             patch("query.services._get_pipeline") as mock_pipeline,
@@ -550,23 +572,33 @@ class TestExecuteAskAdditional:
 
             events = self._run(**self._default_kwargs())
 
-        token_events = [e for e in events if e.startswith("data: ") and "[DONE]" not in e]
+        token_events = [
+            e for e in events if e.startswith("data: ") and "[DONE]" not in e
+        ]
         citations_idx = next(i for i, e in enumerate(events) if "event: citations" in e)
         done_idx = next(i for i, e in enumerate(events) if "event: done" in e)
-        last_token_idx = max(i for i, e in enumerate(events) if e.startswith("data: ") and "[DONE]" not in e)
+        last_token_idx = max(
+            i
+            for i, e in enumerate(events)
+            if e.startswith("data: ") and "[DONE]" not in e
+        )
 
         assert len(token_events) == 2
         assert last_token_idx < citations_idx < done_idx
 
     def test_accumulated_text_drives_citation_resolution(self):
-        chunk = _make_chunk("c-marker", page_number=2, parent_text="Relevant passage here.")
+        chunk = _make_chunk(
+            "c-marker", page_number=2, parent_text="Relevant passage here."
+        )
         with (
             patch("documents.selectors.get_document_by_id"),
             patch("query.services._get_pipeline") as mock_pipeline,
             patch("query.services._resolve_provider") as mock_resolve,
         ):
             mock_pipeline.return_value.run.return_value = [chunk]
-            mock_resolve.return_value = FakeLLMProvider(tokens=["The answer ", "is [1]."])
+            mock_resolve.return_value = FakeLLMProvider(
+                tokens=["The answer ", "is [1]."]
+            )
 
             events = self._run(**self._default_kwargs())
 

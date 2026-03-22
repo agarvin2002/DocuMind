@@ -5,12 +5,14 @@ from core.exceptions import DocuMindError
 
 class QueryError(DocuMindError):
     """Raised when a Q&A query fails to execute."""
+
     default_message = "Query execution failed."
     code = "QUERY_ERROR"
 
 
 class NoRelevantChunksError(QueryError):
     """Raised when the retrieval system finds no relevant context for a question."""
+
     default_message = "No relevant content found for this question."
     http_status_code = 404
     code = "NO_RELEVANT_CHUNKS"
@@ -18,6 +20,7 @@ class NoRelevantChunksError(QueryError):
 
 class ModelNotAvailableError(QueryError):
     """Raised when the caller requests a model that is not configured."""
+
     default_message = "The requested model is not available."
     http_status_code = 400
     code = "MODEL_NOT_AVAILABLE"

@@ -94,9 +94,7 @@ def trigger_ingestion(document_id: uuid.UUID) -> None:
 
 def mark_document_processing(document_id: uuid.UUID) -> None:
     """Set status to PROCESSING. Called by the Celery task at task start."""
-    Document.objects.filter(pk=document_id).update(
-        status=Document.Status.PROCESSING
-    )
+    Document.objects.filter(pk=document_id).update(status=Document.Status.PROCESSING)
 
 
 def mark_document_ready(document_id: uuid.UUID, chunk_count: int) -> None:

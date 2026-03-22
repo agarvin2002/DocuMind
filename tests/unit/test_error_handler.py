@@ -302,4 +302,6 @@ def test_all_responses_include_request_id():
     for exc in exceptions:
         response = documind_exception_handler(exc, _make_context())
         assert response is not None
-        assert "request_id" in response.data, f"Missing request_id for {type(exc).__name__}"
+        assert "request_id" in response.data, (
+            f"Missing request_id for {type(exc).__name__}"
+        )

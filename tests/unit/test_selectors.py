@@ -38,23 +38,35 @@ class TestGetDocumentById:
 class TestListDocuments:
     def test_returns_all_documents(self):
         Document.objects.create(
-            title="Doc A", original_filename="a.pdf", file_type=".pdf",
-            file_size=100, status=Document.Status.PENDING,
+            title="Doc A",
+            original_filename="a.pdf",
+            file_type=".pdf",
+            file_size=100,
+            status=Document.Status.PENDING,
         )
         Document.objects.create(
-            title="Doc B", original_filename="b.pdf", file_type=".pdf",
-            file_size=200, status=Document.Status.READY,
+            title="Doc B",
+            original_filename="b.pdf",
+            file_type=".pdf",
+            file_size=200,
+            status=Document.Status.READY,
         )
         assert list_documents().count() >= 2
 
     def test_filters_by_status(self):
         Document.objects.create(
-            title="Pending", original_filename="p.pdf", file_type=".pdf",
-            file_size=100, status=Document.Status.PENDING,
+            title="Pending",
+            original_filename="p.pdf",
+            file_type=".pdf",
+            file_size=100,
+            status=Document.Status.PENDING,
         )
         Document.objects.create(
-            title="Ready", original_filename="r.pdf", file_type=".pdf",
-            file_size=100, status=Document.Status.READY,
+            title="Ready",
+            original_filename="r.pdf",
+            file_type=".pdf",
+            file_size=100,
+            status=Document.Status.READY,
         )
         pending = list_documents(status=Document.Status.PENDING)
         assert all(d.status == Document.Status.PENDING for d in pending)
@@ -64,8 +76,11 @@ class TestListDocuments:
 class TestGetChunksForDocument:
     def test_returns_empty_queryset_for_new_document(self):
         doc = Document.objects.create(
-            title="No Chunks", original_filename="nc.pdf", file_type=".pdf",
-            file_size=100, status=Document.Status.PENDING,
+            title="No Chunks",
+            original_filename="nc.pdf",
+            file_type=".pdf",
+            file_size=100,
+            status=Document.Status.PENDING,
         )
         chunks = get_chunks_for_document(doc.id)
         assert chunks.count() == 0

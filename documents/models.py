@@ -21,10 +21,10 @@ class Document(models.Model):
     """
 
     class Status(models.TextChoices):
-        PENDING    = "pending",    "Pending"
+        PENDING = "pending", "Pending"
         PROCESSING = "processing", "Processing"
-        READY      = "ready",      "Ready"
-        FAILED     = "failed",     "Failed"
+        READY = "ready", "Ready"
+        FAILED = "failed", "Failed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=500)

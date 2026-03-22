@@ -85,7 +85,9 @@ def test_semantic_cache_lookup_returns_none_on_embedder_failure():
     cache = SemanticCache()
     with patch("query.models.SemanticCacheEntry") as _mock_model:
         with patch("query.services._get_embedder") as mock_embedder_factory:
-            mock_embedder_factory.return_value.embed_single.side_effect = RuntimeError("GPU crash")
+            mock_embedder_factory.return_value.embed_single.side_effect = RuntimeError(
+                "GPU crash"
+            )
             result = cache.lookup("any query", uuid.uuid4())
     assert result is None
 

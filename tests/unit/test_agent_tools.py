@@ -34,14 +34,25 @@ def _make_chunk(text: str = "excerpt text", page: int = 1) -> ChunkSearchResult:
 
 
 class _FakeLLM:
-    def __init__(self, *, should_fail: bool = False, answer: str = "fake answer") -> None:
+    def __init__(
+        self, *, should_fail: bool = False, answer: str = "fake answer"
+    ) -> None:
         self.should_fail = should_fail
         self.answer = answer
         self.call_count = 0
         self.last_user_message: str = ""
         self.last_system_prompt: str = ""
 
-    def complete(self, system_prompt, user_message, response_model, *, temperature, max_tokens, timeout):
+    def complete(
+        self,
+        system_prompt,
+        user_message,
+        response_model,
+        *,
+        temperature,
+        max_tokens,
+        timeout,
+    ):
         self.call_count += 1
         self.last_user_message = user_message
         self.last_system_prompt = system_prompt
@@ -49,7 +60,9 @@ class _FakeLLM:
             raise AnswerGenerationError("fake llm failure")
         return response_model()
 
-    def generate_text(self, system_prompt, user_message, *, temperature, max_tokens, timeout):
+    def generate_text(
+        self, system_prompt, user_message, *, temperature, max_tokens, timeout
+    ):
         self.call_count += 1
         self.last_user_message = user_message
         self.last_system_prompt = system_prompt
@@ -85,7 +98,10 @@ class TestRetrievalTool:
     def test_retrieve_wraps_documind_error_as_retrieval_agent_error(self):
         from core.exceptions import DocuMindError
 
-        with patch("query.services.execute_search", side_effect=DocuMindError("retrieval broke")):
+        with patch(
+            "query.services.execute_search",
+            side_effect=DocuMindError("retrieval broke"),
+        ):
             tool = RetrievalTool()
             with pytest.raises(RetrievalAgentError):
                 tool.retrieve("query", uuid.uuid4(), k=5)

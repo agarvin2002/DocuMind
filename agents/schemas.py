@@ -42,8 +42,8 @@ class SubQueryResult:
 class ComplexityClassification(BaseModel):
     """LLM classifies whether a question needs one retrieval pass or multiple."""
 
-    complexity: str      # "simple" | "complex"
-    workflow_type: str   # "simple" | "multi_hop" | "comparison" | "contradiction"
+    complexity: str  # "simple" | "complex"
+    workflow_type: str  # "simple" | "multi_hop" | "comparison" | "contradiction"
     reasoning: str
 
 
@@ -86,7 +86,7 @@ class ContradictionItem(BaseModel):
     claim_b: str
     document_a_title: str
     document_b_title: str
-    severity: str   # "high" | "medium" | "low"
+    severity: str  # "high" | "medium" | "low"
 
 
 class ContradictionReport(BaseModel):

@@ -6,30 +6,66 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='AnalysisJob',
+            name="AnalysisJob",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('workflow_type', models.CharField(choices=[('multi_hop', 'Multi-Hop Query'), ('comparison', 'Document Comparison'), ('contradiction', 'Contradiction Detection'), ('simple', 'Simple Pass-Through')], db_index=True, max_length=20)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('complete', 'Complete'), ('failed', 'Failed')], db_index=True, default='pending', max_length=20)),
-                ('input_data', models.JSONField()),
-                ('result_data', models.JSONField(blank=True, null=True)),
-                ('error_message', models.TextField(blank=True)),
-                ('started_at', models.DateTimeField(blank=True, null=True)),
-                ('completed_at', models.DateTimeField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "workflow_type",
+                    models.CharField(
+                        choices=[
+                            ("multi_hop", "Multi-Hop Query"),
+                            ("comparison", "Document Comparison"),
+                            ("contradiction", "Contradiction Detection"),
+                            ("simple", "Simple Pass-Through"),
+                        ],
+                        db_index=True,
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("running", "Running"),
+                            ("complete", "Complete"),
+                            ("failed", "Failed"),
+                        ],
+                        db_index=True,
+                        default="pending",
+                        max_length=20,
+                    ),
+                ),
+                ("input_data", models.JSONField()),
+                ("result_data", models.JSONField(blank=True, null=True)),
+                ("error_message", models.TextField(blank=True)),
+                ("started_at", models.DateTimeField(blank=True, null=True)),
+                ("completed_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['status', 'workflow_type'], name='analysis_an_status_aaece9_idx')],
+                "ordering": ["-created_at"],
+                "indexes": [
+                    models.Index(
+                        fields=["status", "workflow_type"],
+                        name="analysis_an_status_aaece9_idx",
+                    )
+                ],
             },
         ),
     ]

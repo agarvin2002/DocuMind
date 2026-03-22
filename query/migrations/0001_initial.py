@@ -8,23 +8,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('documents', '0002_add_hnsw_index'),
+        ("documents", "0002_add_hnsw_index"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SemanticCacheEntry',
+            name="SemanticCacheEntry",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('query_text', models.TextField()),
-                ('embedding', pgvector.django.vector.VectorField(dimensions=384)),
-                ('answer_json', models.JSONField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cache_entries', to='documents.document')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("query_text", models.TextField()),
+                ("embedding", pgvector.django.vector.VectorField(dimensions=384)),
+                ("answer_json", models.JSONField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "document",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cache_entries",
+                        to="documents.document",
+                    ),
+                ),
             ],
         ),
     ]

@@ -233,7 +233,9 @@ class TestRetrievalPipeline:
 
     def test_run_slices_to_k_results(self):
         # Reranker returns 6 results but k=3 — pipeline must return only 3.
-        many_results = [_make_result(f"chunk-{i}", score=float(10 - i)) for i in range(6)]
+        many_results = [
+            _make_result(f"chunk-{i}", score=float(10 - i)) for i in range(6)
+        ]
         pipeline, *_ = self._make_pipeline(rerank_return=many_results)
         results = pipeline.run(query="test", document_id=uuid.uuid4(), k=3)
         assert len(results) == 3

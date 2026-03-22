@@ -69,7 +69,9 @@ def health_check(request):
     else:
         logger.warning("Health check failed — degraded: %s", checks)
 
-    response_status = status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    response_status = (
+        status.HTTP_200_OK if all_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+    )
 
     return Response(
         {
