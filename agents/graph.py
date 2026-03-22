@@ -53,11 +53,13 @@ def _chunks_to_citations(chunks: list) -> list[dict]:
         key = (chunk.document_title, chunk.page_number)
         if key not in seen:
             seen.add(key)
-            citations.append({
-                "document_title": chunk.document_title,
-                "page_number": chunk.page_number,
-                "chunk_id": chunk.chunk_id,
-            })
+            citations.append(
+                {
+                    "document_title": chunk.document_title,
+                    "page_number": chunk.page_number,
+                    "chunk_id": chunk.chunk_id,
+                }
+            )
     return citations
 
 
@@ -78,7 +80,7 @@ class AgentState(TypedDict):
     sub_questions: list[str]
 
     # Retrieval outputs
-    sub_results: list[Any]      # list[SubQueryResult]
+    sub_results: list[Any]  # list[SubQueryResult]
     retrieved_chunks: list[Any]  # list[ChunkSearchResult] for comparison/contradiction
 
     # Generation outputs
@@ -117,7 +119,10 @@ def classify_query_node(
         )
         return {"workflow_type": result.workflow_type, "complexity": result.complexity}
     except PlanningError as exc:
-        logger.error("classify_query_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "classify_query_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -133,11 +138,17 @@ def plan_query_node(
         result = planner.decompose(state["question"], n=AGENT_SUB_QUESTION_MAX)
         logger.info(
             "plan_query_node_complete",
-            extra={"job_id": state["job_id"], "sub_question_count": len(result.sub_questions)},
+            extra={
+                "job_id": state["job_id"],
+                "sub_question_count": len(result.sub_questions),
+            },
         )
         return {"sub_questions": result.sub_questions}
     except PlanningError as exc:
-        logger.error("plan_query_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "plan_query_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -173,7 +184,10 @@ def retrieve_for_subquestion_node(
         )
         return {"sub_results": sub_results}
     except RetrievalAgentError as exc:
-        logger.error("retrieve_for_subquestion_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "retrieve_for_subquestion_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -201,7 +215,10 @@ def generate_sub_answers_node(
         )
         return {"sub_answers": sub_answers, "sub_results": state["sub_results"]}
     except SynthesisError as exc:
-        logger.error("generate_sub_answers_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "generate_sub_answers_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -221,9 +238,15 @@ def synthesize_node(
         )
         all_chunks = [chunk for sr in state["sub_results"] for chunk in sr.chunks]
         logger.info("synthesize_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": _chunks_to_citations(all_chunks)}
+        return {
+            "final_answer": final_answer,
+            "citations": _chunks_to_citations(all_chunks),
+        }
     except SynthesisError as exc:
-        logger.error("synthesize_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "synthesize_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -252,7 +275,10 @@ def comparison_retrieve_node(
         )
         return {"retrieved_chunks": all_chunks}
     except RetrievalAgentError as exc:
-        logger.error("comparison_retrieve_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "comparison_retrieve_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -268,10 +294,18 @@ def comparison_generate_node(
             chunks=state["retrieved_chunks"],
             prompt_key="comparison",
         )
-        logger.info("comparison_generate_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": _chunks_to_citations(state["retrieved_chunks"])}
+        logger.info(
+            "comparison_generate_node_complete", extra={"job_id": state["job_id"]}
+        )
+        return {
+            "final_answer": final_answer,
+            "citations": _chunks_to_citations(state["retrieved_chunks"]),
+        }
     except SynthesisError as exc:
-        logger.error("comparison_generate_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "comparison_generate_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -300,7 +334,10 @@ def contradiction_retrieve_node(
         )
         return {"retrieved_chunks": all_chunks}
     except RetrievalAgentError as exc:
-        logger.error("contradiction_retrieve_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "contradiction_retrieve_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -316,10 +353,18 @@ def contradiction_detect_node(
             chunks=state["retrieved_chunks"],
             prompt_key="contradiction_detection",
         )
-        logger.info("contradiction_detect_node_complete", extra={"job_id": state["job_id"]})
-        return {"final_answer": final_answer, "citations": _chunks_to_citations(state["retrieved_chunks"])}
+        logger.info(
+            "contradiction_detect_node_complete", extra={"job_id": state["job_id"]}
+        )
+        return {
+            "final_answer": final_answer,
+            "citations": _chunks_to_citations(state["retrieved_chunks"]),
+        }
     except SynthesisError as exc:
-        logger.error("contradiction_detect_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "contradiction_detect_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -345,10 +390,15 @@ def simple_passthrough_node(
             chunks=chunks,
             prompt_key="sub_answer",
         )
-        logger.info("simple_passthrough_node_complete", extra={"job_id": state["job_id"]})
+        logger.info(
+            "simple_passthrough_node_complete", extra={"job_id": state["job_id"]}
+        )
         return {"final_answer": final_answer, "citations": _chunks_to_citations(chunks)}
     except (RetrievalAgentError, SynthesisError) as exc:
-        logger.error("simple_passthrough_node_failed", extra={"job_id": state["job_id"], "error": str(exc)})
+        logger.error(
+            "simple_passthrough_node_failed",
+            extra={"job_id": state["job_id"], "error": str(exc)},
+        )
         return {"error": str(exc)}
 
 
@@ -426,34 +476,58 @@ def build_agent_graph(
     graph = StateGraph(AgentState)
 
     # Register all nodes with their dependencies injected
-    graph.add_node("classify_query_node",          partial(classify_query_node, planner=planner))
-    graph.add_node("plan_query_node",              partial(plan_query_node, planner=planner))
-    graph.add_node("retrieve_for_subquestion_node", partial(retrieve_for_subquestion_node, retrieval_tool=retrieval_tool))
-    graph.add_node("generate_sub_answers_node",    partial(generate_sub_answers_node, gen_tool=gen_tool))
-    graph.add_node("synthesize_node",              partial(synthesize_node, gen_tool=gen_tool))
-    graph.add_node("comparison_retrieve_node",     partial(comparison_retrieve_node, retrieval_tool=retrieval_tool))
-    graph.add_node("comparison_generate_node",     partial(comparison_generate_node, gen_tool=gen_tool))
-    graph.add_node("contradiction_retrieve_node",  partial(contradiction_retrieve_node, retrieval_tool=retrieval_tool))
-    graph.add_node("contradiction_detect_node",    partial(contradiction_detect_node, gen_tool=gen_tool))
-    graph.add_node("simple_passthrough_node",      partial(simple_passthrough_node, retrieval_tool=retrieval_tool, gen_tool=gen_tool))
-    graph.add_node("error_node",                   error_node)
+    graph.add_node("classify_query_node", partial(classify_query_node, planner=planner))
+    graph.add_node("plan_query_node", partial(plan_query_node, planner=planner))
+    graph.add_node(
+        "retrieve_for_subquestion_node",
+        partial(retrieve_for_subquestion_node, retrieval_tool=retrieval_tool),
+    )
+    graph.add_node(
+        "generate_sub_answers_node",
+        partial(generate_sub_answers_node, gen_tool=gen_tool),
+    )
+    graph.add_node("synthesize_node", partial(synthesize_node, gen_tool=gen_tool))
+    graph.add_node(
+        "comparison_retrieve_node",
+        partial(comparison_retrieve_node, retrieval_tool=retrieval_tool),
+    )
+    graph.add_node(
+        "comparison_generate_node", partial(comparison_generate_node, gen_tool=gen_tool)
+    )
+    graph.add_node(
+        "contradiction_retrieve_node",
+        partial(contradiction_retrieve_node, retrieval_tool=retrieval_tool),
+    )
+    graph.add_node(
+        "contradiction_detect_node",
+        partial(contradiction_detect_node, gen_tool=gen_tool),
+    )
+    graph.add_node(
+        "simple_passthrough_node",
+        partial(
+            simple_passthrough_node, retrieval_tool=retrieval_tool, gen_tool=gen_tool
+        ),
+    )
+    graph.add_node("error_node", error_node)
 
     # Entry point
     graph.set_entry_point("classify_query_node")
 
     # Conditional edges — routing functions decide which node runs next
-    graph.add_conditional_edges("classify_query_node",           _route_after_classify)
-    graph.add_conditional_edges("plan_query_node",               _route_after_plan)
-    graph.add_conditional_edges("retrieve_for_subquestion_node", _route_after_retrieve_sub)
-    graph.add_conditional_edges("generate_sub_answers_node",     _route_after_generate_sub)
+    graph.add_conditional_edges("classify_query_node", _route_after_classify)
+    graph.add_conditional_edges("plan_query_node", _route_after_plan)
+    graph.add_conditional_edges(
+        "retrieve_for_subquestion_node", _route_after_retrieve_sub
+    )
+    graph.add_conditional_edges("generate_sub_answers_node", _route_after_generate_sub)
 
     # Fixed edges — only one possible next node
-    graph.add_edge("synthesize_node",             END)
-    graph.add_edge("comparison_retrieve_node",    "comparison_generate_node")
-    graph.add_edge("comparison_generate_node",    END)
+    graph.add_edge("synthesize_node", END)
+    graph.add_edge("comparison_retrieve_node", "comparison_generate_node")
+    graph.add_edge("comparison_generate_node", END)
     graph.add_edge("contradiction_retrieve_node", "contradiction_detect_node")
-    graph.add_edge("contradiction_detect_node",   END)
-    graph.add_edge("simple_passthrough_node",     END)
-    graph.add_edge("error_node",                  END)
+    graph.add_edge("contradiction_detect_node", END)
+    graph.add_edge("simple_passthrough_node", END)
+    graph.add_edge("error_node", END)
 
     return graph.compile()

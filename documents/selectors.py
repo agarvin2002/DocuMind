@@ -64,9 +64,7 @@ def get_chunks_for_document(document_id: uuid.UUID):
     """
     Return all DocumentChunk rows for a document, ordered by chunk_index.
     """
-    return DocumentChunk.objects.filter(document_id=document_id).order_by(
-        "chunk_index"
-    )
+    return DocumentChunk.objects.filter(document_id=document_id).order_by("chunk_index")
 
 
 def vector_search_chunks(
@@ -86,8 +84,7 @@ def vector_search_chunks(
         .exclude(embedding=None)
         .annotate(distance=CosineDistance("embedding", embedding))
         .order_by("distance")
-        .select_related("document")
-        [:k]
+        .select_related("document")[:k]
     )
 
     results = []
@@ -133,13 +130,10 @@ def keyword_search_chunks(
     # The index was built from chunks ordered by chunk_index, so position == chunk_index.
     chunk_indices = [pos for pos, _ in position_scores]
 
-    rows = (
-        DocumentChunk.objects.filter(
-            document_id=document_id,
-            chunk_index__in=chunk_indices,
-        )
-        .select_related("document")
-    )
+    rows = DocumentChunk.objects.filter(
+        document_id=document_id,
+        chunk_index__in=chunk_indices,
+    ).select_related("document")
 
     row_by_index = {row.chunk_index: row for row in rows}
 
@@ -185,7 +179,9 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
         r = redis_lib.Redis(connection_pool=_get_redis_pool())
         cached = r.get(redis_key)
         if cached is not None:
-            logger.debug("BM25 index loaded from Redis", extra={"document_id": str(document_id)})
+            logger.debug(
+                "BM25 index loaded from Redis", extra={"document_id": str(document_id)}
+            )
     except redis_lib.RedisError as e:
         logger.warning(
             "Redis unavailable when loading BM25 index — rebuilding from DB",
@@ -196,7 +192,9 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
         return BM25Index.from_bytes(cached)
 
     # Cache miss or Redis down — rebuild from database.
-    logger.info("Rebuilding BM25 index from DB", extra={"document_id": str(document_id)})
+    logger.info(
+        "Rebuilding BM25 index from DB", extra={"document_id": str(document_id)}
+    )
     chunks = (
         DocumentChunk.objects.filter(document_id=document_id)
         .order_by("chunk_index")

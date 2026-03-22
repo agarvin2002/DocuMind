@@ -97,8 +97,7 @@ class CrossEncoderReranker:
             )
 
         reranked = [
-            replace(result, score=score)
-            for result, score in zip(candidates, scores)
+            replace(result, score=score) for result, score in zip(candidates, scores)
         ]
         reranked.sort(key=lambda r: r.score, reverse=True)
 

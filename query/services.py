@@ -332,8 +332,8 @@ def execute_ask(
     )
 
     # --- Pre-stream validation (errors here → normal HTTP response, no stream) ---
-    get_document_by_id(document_id)       # raises DocumentNotFoundError (404)
-    provider = _resolve_provider(model)   # raises ModelNotAvailableError (400)
+    get_document_by_id(document_id)  # raises DocumentNotFoundError (404)
+    provider = _resolve_provider(model)  # raises ModelNotAvailableError (400)
 
     # --- Semantic cache check (before expensive retrieval + LLM call) ---
     cache = _get_semantic_cache()
@@ -377,14 +377,16 @@ def execute_ask(
     first_token_time: float | None = None
 
     try:
-        for i, token in enumerate(stream_answer_tokens(
-            provider,
-            system_prompt,
-            user_message,
-            temperature=settings.DOCUMIND_LLM_TEMPERATURE,
-            max_tokens=settings.DOCUMIND_LLM_MAX_TOKENS,
-            timeout=settings.DOCUMIND_LLM_TIMEOUT_SECONDS,
-        )):
+        for i, token in enumerate(
+            stream_answer_tokens(
+                provider,
+                system_prompt,
+                user_message,
+                temperature=settings.DOCUMIND_LLM_TEMPERATURE,
+                max_tokens=settings.DOCUMIND_LLM_MAX_TOKENS,
+                timeout=settings.DOCUMIND_LLM_TIMEOUT_SECONDS,
+            )
+        ):
             if i == 0:
                 first_token_time = time.monotonic() - start_time
             accumulated += token
@@ -419,7 +421,9 @@ def execute_ask(
                 "provider": type(provider).__name__,
                 "answer_length": len(accumulated),
                 "citation_count": len(citations),
-                "ttft_ms": round(first_token_time * 1000) if first_token_time is not None else None,
+                "ttft_ms": round(first_token_time * 1000)
+                if first_token_time is not None
+                else None,
                 "total_ms": round(total_time * 1000),
             },
         )

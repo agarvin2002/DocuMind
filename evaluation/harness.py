@@ -72,7 +72,9 @@ class EvalHarness:
         if use_cache:
             cached = self._read_cache(cache_key)
             if cached is not None:
-                logger.info("Eval result served from cache", extra={"cache_key": cache_key})
+                logger.info(
+                    "Eval result served from cache", extra={"cache_key": cache_key}
+                )
                 return cached
 
         logger.info("Starting eval run", extra={"sample_count": len(samples)})
@@ -126,6 +128,7 @@ class EvalHarness:
         results: list[tuple[EvalSample, str, list[str]]] = []
 
         with ThreadPoolExecutor(max_workers=EVAL_MAX_WORKERS) as executor:
+
             def _resolve_uuid(s: EvalSample) -> UUID:
                 if not s.document_id:
                     logger.warning(
@@ -203,11 +206,15 @@ class EvalHarness:
 
 # --- helpers ---
 
-def _compute_improvements(full: MetricResult, baseline: MetricResult) -> dict[str, float]:
+
+def _compute_improvements(
+    full: MetricResult, baseline: MetricResult
+) -> dict[str, float]:
     """Calculate percentage improvement of full system over baseline for each metric.
 
     Returns 0.0 for any metric where the baseline score is zero to avoid division by zero.
     """
+
     def _pct(full_score: float, base_score: float) -> float:
         if base_score == 0.0:
             return 0.0

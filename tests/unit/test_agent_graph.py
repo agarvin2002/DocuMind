@@ -133,7 +133,9 @@ def _fake_gen_tool(
 class TestClassifyQueryNode:
     def test_sets_workflow_type(self):
         state = _base_state()
-        result = classify_query_node(state, planner=_fake_planner(workflow_type="comparison"))
+        result = classify_query_node(
+            state, planner=_fake_planner(workflow_type="comparison")
+        )
         assert result["workflow_type"] == "comparison"
         assert result["complexity"] == "complex"
 
@@ -181,8 +183,12 @@ class TestRetrieveForSubquestionNode:
 class TestGenerateSubAnswersNode:
     def test_fills_sub_answers(self):
         sub_results = [
-            SubQueryResult(sub_question="q1", document_id="doc1", chunks=[_make_chunk()]),
-            SubQueryResult(sub_question="q2", document_id="doc1", chunks=[_make_chunk()]),
+            SubQueryResult(
+                sub_question="q1", document_id="doc1", chunks=[_make_chunk()]
+            ),
+            SubQueryResult(
+                sub_question="q2", document_id="doc1", chunks=[_make_chunk()]
+            ),
         ]
         state = _base_state(sub_results=sub_results)
         result = generate_sub_answers_node(
@@ -316,7 +322,10 @@ class TestGraphRouting:
         assert _route_after_plan(_base_state(error="fail")) == "error_node"
 
     def test_route_after_plan_routes_to_retrieve_on_success(self):
-        assert _route_after_plan(_base_state(error=None)) == "retrieve_for_subquestion_node"
+        assert (
+            _route_after_plan(_base_state(error=None))
+            == "retrieve_for_subquestion_node"
+        )
 
     def test_route_after_retrieve_sub_routes_to_error_on_error(self):
         assert _route_after_retrieve_sub(_base_state(error="fail")) == "error_node"
@@ -343,7 +352,9 @@ class TestFullGraphInvocation:
 
     def test_multi_hop_graph_returns_synthesized_answer(self):
         graph = self._build(
-            planner=_fake_planner(workflow_type="multi_hop", sub_questions=["q1", "q2"]),
+            planner=_fake_planner(
+                workflow_type="multi_hop", sub_questions=["q1", "q2"]
+            ),
             retrieval_tool=_fake_retrieval_tool(chunks=[_make_chunk()]),
             gen_tool=_fake_gen_tool(answer="sub answer", synthesized="final synthesis"),
         )
@@ -375,7 +386,9 @@ class TestFullGraphInvocation:
         doc1, doc2 = str(uuid.uuid4()), str(uuid.uuid4())
         graph = self._build(
             planner=_fake_planner(workflow_type="comparison", complexity="complex"),
-            retrieval_tool=_fake_retrieval_tool(chunks=[_make_chunk("doc excerpt", page=3)]),
+            retrieval_tool=_fake_retrieval_tool(
+                chunks=[_make_chunk("doc excerpt", page=3)]
+            ),
             gen_tool=_fake_gen_tool(answer="Doc A is faster; Doc B is cheaper."),
         )
         state = _base_state(workflow_type="comparison", document_ids=[doc1, doc2])
@@ -389,7 +402,9 @@ class TestFullGraphInvocation:
         doc1, doc2 = str(uuid.uuid4()), str(uuid.uuid4())
         graph = self._build(
             planner=_fake_planner(workflow_type="contradiction", complexity="complex"),
-            retrieval_tool=_fake_retrieval_tool(chunks=[_make_chunk("claim text", page=7)]),
+            retrieval_tool=_fake_retrieval_tool(
+                chunks=[_make_chunk("claim text", page=7)]
+            ),
             gen_tool=_fake_gen_tool(answer="Claim on page 7 contradicts Doc B."),
         )
         state = _base_state(workflow_type="contradiction", document_ids=[doc1, doc2])

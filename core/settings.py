@@ -37,11 +37,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "rest_framework",
     "drf_spectacular",
     "storages",
-
     "documents",
     "query",
     "analysis",
@@ -108,7 +106,9 @@ DATABASES = {
 # Password validation
 # ---------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -192,8 +192,10 @@ CELERY_TIMEZONE = "UTC"
 # A malformed PDF or hung embedding call would otherwise block a worker indefinitely.
 # SOFT_TIME_LIMIT raises SoftTimeLimitExceeded so the task can mark the document FAILED
 # and clean up before TIME_LIMIT force-kills the worker process.
-CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=600)  # 10 min
-CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=720)            # 12 min
+CELERY_TASK_SOFT_TIME_LIMIT = env.int(
+    "CELERY_TASK_SOFT_TIME_LIMIT", default=600
+)  # 10 min
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=720)  # 12 min
 # Default is sized for local Ollama inference (multi-hop = ~7 LLM calls × ~80s each).
 # Production with GPT-4o completes in <30s — override to 300/360 via env var there.
 
@@ -225,7 +227,9 @@ BEDROCK_ENABLED = env.bool("BEDROCK_ENABLED", default=False)
 BEDROCK_AWS_ACCESS_KEY_ID = env("BEDROCK_AWS_ACCESS_KEY_ID", default="")
 BEDROCK_AWS_SECRET_ACCESS_KEY = env("BEDROCK_AWS_SECRET_ACCESS_KEY", default="")
 BEDROCK_AWS_REGION = env("BEDROCK_AWS_REGION", default="us-east-1")
-BEDROCK_MODEL_ID = env("BEDROCK_MODEL_ID", default="anthropic.claude-3-sonnet-20240229-v1:0")
+BEDROCK_MODEL_ID = env(
+    "BEDROCK_MODEL_ID", default="anthropic.claude-3-sonnet-20240229-v1:0"
+)
 
 # Ollama — local LLM fallback, no API key needed, runs via Docker Compose
 OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=False)
@@ -237,13 +241,19 @@ OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 # Defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
 # Set to "openai" to use OpenAI even while OLLAMA_ENABLED=true (e.g. running both
 # Phase 4 Ollama + Phase 5 OpenAI in parallel during testing).
-AGENT_LLM_PROVIDER = env("AGENT_LLM_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
+AGENT_LLM_PROVIDER = env(
+    "AGENT_LLM_PROVIDER",
+    default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai",
+)
 
 # RAGAS judge provider — selects the LLM that scores eval outputs (faithfulness etc.).
 # Valid values: "ollama", "openai". Same logic as AGENT_LLM_PROVIDER:
 # defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
 # Switch to "openai" once you have an OPENAI_API_KEY — scoring quality improves noticeably.
-RAGAS_JUDGE_PROVIDER = env("RAGAS_JUDGE_PROVIDER", default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai")
+RAGAS_JUDGE_PROVIDER = env(
+    "RAGAS_JUDGE_PROVIDER",
+    default="ollama" if env.bool("OLLAMA_ENABLED", default=False) else "openai",
+)
 # Which Ollama model to use as the RAGAS judge (RAGAS_JUDGE_PROVIDER=ollama).
 # Must be pulled first: docker compose exec ollama ollama pull qwen2.5:3b
 RAGAS_OLLAMA_MODEL = env("RAGAS_OLLAMA_MODEL", default="qwen2.5:3b")
@@ -300,13 +310,11 @@ LOG_FORMAT = env("LOG_FORMAT", default="verbose")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-
     "filters": {
         "request_id": {
             "()": "core.middleware.RequestIDFilter",
         },
     },
-
     "formatters": {
         "verbose": {
             "format": "[{asctime}] {levelname} {name} [{request_id}] - {message}",
@@ -325,7 +333,6 @@ LOGGING = {
             "datefmt": "%Y-%m-%dT%H:%M:%SZ",
         },
     },
-
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
@@ -341,7 +348,6 @@ LOGGING = {
             "filters": ["request_id"],
         },
     },
-
     "loggers": {
         "": {
             "handlers": ["console", "file"],

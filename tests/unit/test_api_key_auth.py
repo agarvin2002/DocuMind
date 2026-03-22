@@ -28,6 +28,7 @@ from authentication.permissions import IsAuthenticatedWithAPIKey
 # APIKey model — key generation and hashing
 # ---------------------------------------------------------------------------
 
+
 class TestAPIKeyModel:
     def test_generate_key_has_dm_prefix(self):
         raw = APIKey.generate_key()
@@ -56,6 +57,7 @@ class TestAPIKeyModel:
 # ---------------------------------------------------------------------------
 # APIKey model — create_with_key (uses DB; skipped without Postgres)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestAPIKeyCreate:
@@ -87,6 +89,7 @@ class TestAPIKeyCreate:
 # ---------------------------------------------------------------------------
 # APIKeyAuthentication — authenticate() method
 # ---------------------------------------------------------------------------
+
 
 class TestAPIKeyAuthentication:
     def _make_request(self, key: str | None = None) -> MagicMock:
@@ -164,6 +167,7 @@ class TestAPIKeyAuthentication:
 # IsAuthenticatedWithAPIKey — permission class
 # ---------------------------------------------------------------------------
 
+
 class TestIsAuthenticatedWithAPIKey:
     def test_raises_auth_error_when_auth_is_none(self):
         perm = IsAuthenticatedWithAPIKey()
@@ -190,6 +194,7 @@ class TestIsAuthenticatedWithAPIKey:
 # Authentication exceptions — correct base classes and codes
 # ---------------------------------------------------------------------------
 
+
 class TestAuthenticationExceptions:
     def test_authentication_error_is_drf_authentication_failed(self):
         assert issubclass(AuthenticationError, AuthenticationFailed)
@@ -209,6 +214,7 @@ class TestAuthenticationExceptions:
 # ---------------------------------------------------------------------------
 # create_api_key management command
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestCreateAPIKeyCommand:

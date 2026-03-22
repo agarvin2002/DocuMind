@@ -25,11 +25,14 @@ def _make_job(**kwargs) -> AnalysisJob:
     job = AnalysisJob()
     job.id = uuid.uuid4()
     job.workflow_type = kwargs.get("workflow_type", AnalysisJob.WorkflowType.MULTI_HOP)
-    job.input_data = kwargs.get("input_data", {
-        "question": "What are the risks?",
-        "document_ids": [str(uuid.uuid4())],
-        "workflow_type": AnalysisJob.WorkflowType.MULTI_HOP,
-    })
+    job.input_data = kwargs.get(
+        "input_data",
+        {
+            "question": "What are the risks?",
+            "document_ids": [str(uuid.uuid4())],
+            "workflow_type": AnalysisJob.WorkflowType.MULTI_HOP,
+        },
+    )
     return job
 
 
@@ -66,11 +69,13 @@ class TestAgentExecutor:
     def test_run_builds_correct_initial_state(self):
         executor = self._make_executor()
         doc_id = str(uuid.uuid4())
-        job = _make_job(input_data={
-            "question": "Compare these",
-            "document_ids": [doc_id],
-            "workflow_type": "comparison",
-        })
+        job = _make_job(
+            input_data={
+                "question": "Compare these",
+                "document_ids": [doc_id],
+                "workflow_type": "comparison",
+            }
+        )
         executor.run(job)
         call_args = executor._graph.invoke.call_args[0][0]
         assert call_args["question"] == "Compare these"
@@ -103,7 +108,15 @@ class TestAgentExecutor:
     def test_extract_result_includes_all_expected_keys(self):
         executor = self._make_executor()
         result = executor.run(_make_job())
-        for key in ["workflow_type", "question", "final_answer", "sub_questions", "sub_answers", "citations", "error"]:
+        for key in [
+            "workflow_type",
+            "question",
+            "final_answer",
+            "sub_questions",
+            "sub_answers",
+            "citations",
+            "error",
+        ]:
             assert key in result
 
 
@@ -117,10 +130,13 @@ class TestLazySingleton:
 
     def test_lazy_singleton_only_builds_once(self):
         mock_executor = MagicMock()
-        with patch("agents.executor._build_executor", return_value=mock_executor) as mock_build:
+        with patch(
+            "agents.executor._build_executor", return_value=mock_executor
+        ) as mock_build:
             run_analysis.__module__  # just access, not call
             # Trigger two calls through _get_executor
             from agents.executor import _get_executor
+
             first = _get_executor()
             second = _get_executor()
         assert first is second

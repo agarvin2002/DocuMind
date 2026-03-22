@@ -78,7 +78,9 @@ class StorageClient:
                 "Failed to delete file from storage",
                 extra={"path": path, "error": str(e), "error_type": type(e).__name__},
             )
-            raise StorageError(f"Could not delete file {path!r} from storage: {e}") from e
+            raise StorageError(
+                f"Could not delete file {path!r} from storage: {e}"
+            ) from e
 
     def file_exists(self, path: str) -> bool:
         """

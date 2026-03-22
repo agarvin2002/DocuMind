@@ -4,38 +4,39 @@ from django.db import models
 
 
 class AnalysisJob(models.Model):
-
     class Status(models.TextChoices):
-        PENDING  = "pending",  "Pending"
-        RUNNING  = "running",  "Running"
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
         COMPLETE = "complete", "Complete"
-        FAILED   = "failed",   "Failed"
+        FAILED = "failed", "Failed"
 
     class WorkflowType(models.TextChoices):
-        MULTI_HOP     = "multi_hop",     "Multi-Hop Query"
-        COMPARISON    = "comparison",    "Document Comparison"
+        MULTI_HOP = "multi_hop", "Multi-Hop Query"
+        COMPARISON = "comparison", "Document Comparison"
         CONTRADICTION = "contradiction", "Contradiction Detection"
-        SIMPLE        = "simple",        "Simple Pass-Through"
+        SIMPLE = "simple", "Simple Pass-Through"
 
-    id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    workflow_type = models.CharField(max_length=20, choices=WorkflowType.choices, db_index=True)
-    status        = models.CharField(
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workflow_type = models.CharField(
+        max_length=20, choices=WorkflowType.choices, db_index=True
+    )
+    status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.PENDING,
         db_index=True,
     )
-    input_data    = models.JSONField()
-    result_data   = models.JSONField(null=True, blank=True)
+    input_data = models.JSONField()
+    result_data = models.JSONField(null=True, blank=True)
     error_message = models.TextField(blank=True)
-    started_at    = models.DateTimeField(null=True, blank=True)
-    completed_at  = models.DateTimeField(null=True, blank=True)
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
-        indexes  = [models.Index(fields=["status", "workflow_type"])]
+        indexes = [models.Index(fields=["status", "workflow_type"])]
 
     def __str__(self) -> str:
         return f"AnalysisJob({self.id}, {self.workflow_type}, {self.status})"

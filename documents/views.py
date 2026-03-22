@@ -45,9 +45,7 @@ class DocumentUploadView(APIView):
             )
             trigger_ingestion(doc.id)
         except DocumentUploadError as e:
-            return Response(
-                {"detail": str(e)}, status=e.http_status_code
-            )
+            return Response({"detail": str(e)}, status=e.http_status_code)
 
         logger.info(
             "Document upload accepted",

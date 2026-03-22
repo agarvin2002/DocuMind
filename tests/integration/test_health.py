@@ -10,7 +10,6 @@ from rest_framework.test import APIClient
 
 @pytest.mark.django_db
 class TestHealthEndpoint:
-
     def test_health_endpoint_returns_200(self):
         response = APIClient().get("/api/v1/health/")
         assert response.status_code == 200

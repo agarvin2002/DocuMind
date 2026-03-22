@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_request_id(context: dict | None) -> str:
     """
     Returns the request ID for the current thread.
@@ -74,6 +75,7 @@ def _flatten_drf_errors(detail) -> str:
 # ---------------------------------------------------------------------------
 # Main handler
 # ---------------------------------------------------------------------------
+
 
 def documind_exception_handler(exc: Exception, context: dict) -> Response | None:
     """
@@ -121,14 +123,22 @@ def documind_exception_handler(exc: Exception, context: dict) -> Response | None
     # --- DRF 404 ---
     if isinstance(exc, NotFound):
         return Response(
-            {"error": "The requested resource was not found.", "code": "NOT_FOUND", "request_id": request_id},
+            {
+                "error": "The requested resource was not found.",
+                "code": "NOT_FOUND",
+                "request_id": request_id,
+            },
             status=status.HTTP_404_NOT_FOUND,
         )
 
     # --- DRF 405 ---
     if isinstance(exc, MethodNotAllowed):
         return Response(
-            {"error": "Method not allowed.", "code": "METHOD_NOT_ALLOWED", "request_id": request_id},
+            {
+                "error": "Method not allowed.",
+                "code": "METHOD_NOT_ALLOWED",
+                "request_id": request_id,
+            },
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
@@ -161,7 +171,11 @@ def documind_exception_handler(exc: Exception, context: dict) -> Response | None
     # --- DRF ParseError (malformed JSON body) ---
     if isinstance(exc, ParseError):
         return Response(
-            {"error": "Malformed request body.", "code": "PARSE_ERROR", "request_id": request_id},
+            {
+                "error": "Malformed request body.",
+                "code": "PARSE_ERROR",
+                "request_id": request_id,
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -171,6 +185,10 @@ def documind_exception_handler(exc: Exception, context: dict) -> Response | None
         extra={"exception_type": type(exc).__name__, "request_id": request_id},
     )
     return Response(
-        {"error": "An unexpected error occurred.", "code": "INTERNAL_ERROR", "request_id": request_id},
+        {
+            "error": "An unexpected error occurred.",
+            "code": "INTERNAL_ERROR",
+            "request_id": request_id,
+        },
         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
