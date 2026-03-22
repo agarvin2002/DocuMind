@@ -21,7 +21,17 @@ from analysis.models import AnalysisJob
 
 @pytest.fixture
 def client():
-    return APIClient()
+    import secrets
+
+    from authentication.models import APIKey
+
+    c = APIClient()
+    # Bypass API key auth — these tests exercise view logic, not authentication.
+    # An unsaved APIKey() instance satisfies isinstance(request.auth, APIKey).
+    # A unique key_hash per test prevents the rate limiter from sharing buckets
+    # across tests (all would otherwise share key_hash="" which is the CharField default).
+    c.force_authenticate(token=APIKey(name="test-key", is_active=True, key_hash=secrets.token_hex(32)))
+    return c
 
 
 @pytest.fixture

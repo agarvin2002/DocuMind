@@ -24,7 +24,6 @@ from authentication.exceptions import AuthenticationError, InvalidAPIKeyError
 from authentication.models import APIKey
 from authentication.permissions import IsAuthenticatedWithAPIKey
 
-
 # ---------------------------------------------------------------------------
 # APIKey model — key generation and hashing
 # ---------------------------------------------------------------------------
