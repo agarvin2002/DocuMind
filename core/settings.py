@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "documents",
     "query",
     "analysis",
+    "authentication",
 ]
 
 # ---------------------------------------------------------------------------
@@ -155,6 +156,13 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "authentication.authentication.APIKeyAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "authentication.permissions.IsAuthenticatedWithAPIKey",
+    ],
+    "EXCEPTION_HANDLER": "core.error_handler.documind_exception_handler",
 }
 
 # ---------------------------------------------------------------------------

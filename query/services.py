@@ -138,6 +138,20 @@ _provider_registry_lock = threading.Lock()
 _fallback_client = None
 _fallback_client_lock = threading.Lock()
 
+_semantic_cache = None
+_semantic_cache_lock = threading.Lock()
+
+
+def _get_semantic_cache():
+    global _semantic_cache
+    if _semantic_cache is None:
+        with _semantic_cache_lock:
+            if _semantic_cache is None:
+                from query.semantic_cache import SemanticCache
+
+                _semantic_cache = SemanticCache()
+    return _semantic_cache
+
 
 def _get_provider_registry() -> dict:
     """
@@ -321,6 +335,19 @@ def execute_ask(
     get_document_by_id(document_id)       # raises DocumentNotFoundError (404)
     provider = _resolve_provider(model)   # raises ModelNotAvailableError (400)
 
+    # --- Semantic cache check (before expensive retrieval + LLM call) ---
+    cache = _get_semantic_cache()
+    cached = cache.lookup(query, document_id)
+    if cached is not None:
+        from generation.schemas import Citation
+
+        cached_answer: str = cached.get("answer", "")
+        cached_citations = [Citation(**c) for c in cached.get("citations", [])]
+        yield build_sse_token_event(cached_answer)
+        yield build_sse_citations_event(cached_citations)
+        yield build_sse_done_event()
+        return
+
     chunks = _get_pipeline().run(query=query, document_id=document_id, k=k)
     if not chunks:
         raise NoRelevantChunksError(
@@ -373,6 +400,16 @@ def execute_ask(
 
         yield build_sse_citations_event(citations)
         yield build_sse_done_event()
+
+        # Store successful answer in semantic cache for future identical/similar queries.
+        cache.store(
+            query,
+            document_id,
+            {
+                "answer": accumulated,
+                "citations": [c.model_dump() for c in citations],
+            },
+        )
 
         total_time = time.monotonic() - start_time
         logger.info(

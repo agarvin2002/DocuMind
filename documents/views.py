@@ -11,6 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.throttles import DocumentUploadThrottle
 from documents.exceptions import DocumentNotFoundError, DocumentUploadError
 from documents.selectors import get_document_by_id
 from documents.serializers import DocumentSerializer, DocumentUploadSerializer
@@ -23,6 +24,7 @@ class DocumentUploadView(APIView):
     """POST /api/v1/documents/ — accept a PDF upload and queue ingestion."""
 
     parser_classes = [MultiPartParser]
+    throttle_classes = [DocumentUploadThrottle]
 
     def post(self, request: Request) -> Response:
         serializer = DocumentUploadSerializer(data=request.data)

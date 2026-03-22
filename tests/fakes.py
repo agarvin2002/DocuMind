@@ -180,6 +180,27 @@ class FakeRAGSystem:
         return self._answer, self._contexts[:k]
 
 
+class FakeSemanticCache:
+    """
+    Satisfies query/protocols.SemanticCachePort.
+
+    Pass hit_answer={"answer": "...", "citations": [...]} to simulate a cache hit.
+    Inspect store_calls to verify what was written to the cache.
+    """
+
+    def __init__(self, hit_answer: dict | None = None) -> None:
+        self.hit_answer = hit_answer
+        self.store_calls: list[dict] = []
+
+    def lookup(self, query: str, document_id: uuid.UUID) -> dict | None:
+        return self.hit_answer
+
+    def store(self, query: str, document_id: uuid.UUID, answer_json: dict) -> None:
+        self.store_calls.append(
+            {"query": query, "document_id": document_id, "answer_json": answer_json}
+        )
+
+
 class FakeRAGScorer:
     """Test double that satisfies RAGScorerPort.
 
