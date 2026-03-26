@@ -101,4 +101,12 @@ jobs:
       - run: uv sync
 
       - name: Audit dependencies for known CVEs
-        run: uvx pip-audit
+        # Export pinned requirements from the lockfile so pip-audit audits
+        # exactly what we ship, not uvx's own isolated environment.
+        # CVE-2026-4539  (pygments)  — no fix released; pinned to <2.19.0 in pyproject.toml
+        # CVE-2025-69872 (diskcache) — no fix released; transitive via instructor/ragas
+        run: |
+          uv export --no-hashes --format requirements-txt > /tmp/requirements-audit.txt
+          uvx pip-audit -r /tmp/requirements-audit.txt \
+            --ignore-vuln CVE-2026-4539 \
+            --ignore-vuln CVE-2025-69872
