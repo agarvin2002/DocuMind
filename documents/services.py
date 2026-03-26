@@ -9,29 +9,15 @@ import logging
 import uuid
 
 import redis as redis_lib
-from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
+from core.redis import get_redis_client
 from documents.exceptions import DocumentUploadError
 from documents.models import Document, DocumentChunk
 from ingestion.chunkers import ChunkData
 from retrieval.bm25 import BM25Index
 
 logger = logging.getLogger(__name__)
-
-# Module-level pool — connections are reused across Celery tasks instead of torn down per call.
-_redis_pool: redis_lib.ConnectionPool | None = None
-
-
-def _get_redis_pool() -> redis_lib.ConnectionPool:
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = redis_lib.ConnectionPool.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-    return _redis_pool
 
 
 def create_document(
@@ -187,7 +173,7 @@ def save_bm25_index(document_id: uuid.UUID, bm25_index: BM25Index) -> None:
     """
     redis_key = f"documind:bm25:v1:{document_id}"
     try:
-        r = redis_lib.Redis(connection_pool=_get_redis_pool())
+        r = get_redis_client()
         r.setex(redis_key, 604800, bm25_index.serialize())
         logger.info(
             "BM25 index saved to Redis",

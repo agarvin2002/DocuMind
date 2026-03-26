@@ -9,30 +9,15 @@ import logging
 import uuid
 
 import redis as redis_lib
-from django.conf import settings
 from pgvector.django import CosineDistance
 
+from core.redis import get_redis_client
 from documents.exceptions import DocumentNotFoundError
 from documents.models import Document, DocumentChunk
 from retrieval.bm25 import BM25Index
 from retrieval.schemas import ChunkSearchResult
 
 logger = logging.getLogger(__name__)
-
-# Module-level pool — connections are reused across requests instead of torn down per call.
-# Initialised lazily on first BM25 lookup so Django settings are available.
-_redis_pool: redis_lib.ConnectionPool | None = None
-
-
-def _get_redis_pool() -> redis_lib.ConnectionPool:
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = redis_lib.ConnectionPool.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-    return _redis_pool
 
 
 def get_document_by_id(document_id: uuid.UUID) -> Document:
@@ -176,7 +161,7 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
     cached = None
 
     try:
-        r = redis_lib.Redis(connection_pool=_get_redis_pool())
+        r = get_redis_client()
         cached = r.get(redis_key)
         if cached is not None:
             logger.debug(
@@ -203,7 +188,7 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
     bm25_index = BM25Index.build(list(chunks))
 
     try:
-        r = redis_lib.Redis(connection_pool=_get_redis_pool())
+        r = get_redis_client()
         r.setex(redis_key, 604800, bm25_index.serialize())
     except redis_lib.RedisError as e:
         logger.warning(
