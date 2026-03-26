@@ -41,6 +41,31 @@ class AnalysisRequestSerializer(serializers.Serializer):
         ),
     )
 
+    def validate(self, data):
+        """
+        Cross-field validation: single-document workflows must receive exactly one
+        document_id. Comparison and contradiction are the multi-document workflows.
+        """
+        workflow_type = data.get("workflow_type") or AnalysisJob.WorkflowType.MULTI_HOP
+        single_doc_workflows = {
+            AnalysisJob.WorkflowType.SIMPLE,
+            AnalysisJob.WorkflowType.MULTI_HOP,
+        }
+        if (
+            workflow_type in single_doc_workflows
+            and len(data.get("document_ids", [])) > 1
+        ):
+            raise serializers.ValidationError(
+                {
+                    "document_ids": (
+                        f"The '{workflow_type}' workflow searches a single document. "
+                        "Provide exactly one document_id, or use 'comparison' or "
+                        "'contradiction' for multi-document analysis."
+                    )
+                }
+            )
+        return data
+
 
 class AnalysisJobSerializer(serializers.ModelSerializer):
     """Serializes an AnalysisJob for GET and POST responses."""
