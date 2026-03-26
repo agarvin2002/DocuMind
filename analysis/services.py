@@ -9,55 +9,103 @@ Usage:
     from analysis.services import create_analysis_job, dispatch_analysis_task
 """
 
+import hashlib
 import json
 import logging
 
-import redis as redis_lib
-from django.conf import settings
 from django.utils import timezone
 
 from agents.constants import AGENT_JOB_RESULT_CACHE_PREFIX, AGENT_JOB_RESULT_TTL
 from analysis.models import AnalysisJob
+from core.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 
-# Module-level pool — connections are reused across Celery tasks instead of torn down per call.
-_redis_pool: redis_lib.ConnectionPool | None = None
 
-
-def _get_redis_pool() -> redis_lib.ConnectionPool:
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = redis_lib.ConnectionPool.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-    return _redis_pool
-
-
-def create_analysis_job(workflow_type: str, input_data: dict) -> AnalysisJob:
+def _compute_idempotency_key(
+    question: str, document_ids: list[str], workflow_type: str
+) -> str:
     """
-    Create and persist a new AnalysisJob with status=PENDING.
+    Compute a stable SHA-256 fingerprint for a job request.
+
+    Sorting document_ids ensures that ["a", "b"] and ["b", "a"] produce the
+    same key — clients should not be penalised for different ordering.
+
+    Returns the first 16 hex chars (64-bit prefix) — collision-resistant enough
+    for job deduplication while keeping the field compact.
+    """
+    canonical = json.dumps(
+        {
+            "question": question,
+            "document_ids": sorted(document_ids),
+            "workflow_type": workflow_type,
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def create_analysis_job(
+    workflow_type: str, input_data: dict
+) -> tuple[AnalysisJob, bool]:
+    """
+    Return an AnalysisJob for this request, creating one only if needed.
+
+    Idempotency: if a PENDING, RUNNING, or COMPLETE job with the same
+    (question, document_ids, workflow_type) fingerprint already exists, that
+    job is returned unchanged. A new job is created only when no active job
+    exists (i.e. the previous attempt failed or this is genuinely new).
 
     Args:
-        workflow_type: one of AnalysisJob.WorkflowType — "multi_hop", "comparison",
-                       "contradiction", "simple".
-        input_data:    arbitrary dict stored as JSON; typically contains question
-                       and document_ids.
+        workflow_type: one of AnalysisJob.WorkflowType.
+        input_data:    dict with "question", "document_ids", "workflow_type".
 
     Returns:
-        The newly created AnalysisJob instance.
+        (job, created) — created=True when a new row was inserted.
     """
+    key = _compute_idempotency_key(
+        question=input_data["question"],
+        document_ids=input_data["document_ids"],
+        workflow_type=workflow_type,
+    )
+
+    # Return any active (non-failed) job with the same fingerprint.
+    existing = (
+        AnalysisJob.objects.filter(
+            idempotency_key=key,
+            status__in=[
+                AnalysisJob.Status.PENDING,
+                AnalysisJob.Status.RUNNING,
+                AnalysisJob.Status.COMPLETE,
+            ],
+        )
+        .order_by("-created_at")
+        .first()
+    )
+    if existing is not None:
+        logger.info(
+            "analysis_job_deduplicated",
+            extra={"job_id": str(existing.id), "workflow_type": workflow_type},
+        )
+        return existing, False
+
+    # No active job found — a previous attempt may have failed.
+    # Clear the idempotency key on any failed job with this fingerprint so the
+    # unique constraint does not block the new attempt.
+    AnalysisJob.objects.filter(
+        idempotency_key=key, status=AnalysisJob.Status.FAILED
+    ).update(idempotency_key=None)
+
     job = AnalysisJob.objects.create(
         workflow_type=workflow_type,
         input_data=input_data,
+        idempotency_key=key,
     )
     logger.info(
         "analysis_job_created",
         extra={"job_id": str(job.id), "workflow_type": workflow_type},
     )
-    return job
+    return job, True
 
 
 def dispatch_analysis_task(job: AnalysisJob) -> None:
@@ -146,7 +194,7 @@ def _cache_job_result(job_id: str, result_data: dict) -> None:
     """
     key = f"{AGENT_JOB_RESULT_CACHE_PREFIX}{job_id}"
     try:
-        conn = redis_lib.Redis(connection_pool=_get_redis_pool())
+        conn = get_redis_client()
         conn.set(key, json.dumps(result_data), ex=AGENT_JOB_RESULT_TTL)
     except Exception:  # noqa: BLE001
         logger.warning("agent_result_cache_write_failed", extra={"job_id": job_id})
