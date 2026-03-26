@@ -60,14 +60,14 @@ def _mock_redis_miss():
     """Return a mock Redis connection that always misses the cache."""
     mock_conn = MagicMock()
     mock_conn.get.return_value = None
-    return patch("agents.query_planner.redis_lib.Redis", return_value=mock_conn)
+    return patch("agents.query_planner.get_redis_client", return_value=mock_conn)
 
 
 def _mock_redis_hit(data: dict):
     """Return a mock Redis connection that always hits with the given data."""
     mock_conn = MagicMock()
     mock_conn.get.return_value = json.dumps(data).encode()
-    return patch("agents.query_planner.redis_lib.Redis", return_value=mock_conn)
+    return patch("agents.query_planner.get_redis_client", return_value=mock_conn)
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +115,7 @@ class TestQueryPlannerClassify:
         llm = _FakeLLM()
         planner = QueryPlanner(structured_llm=llm)
         with patch(
-            "agents.query_planner.redis_lib.Redis", side_effect=Exception("Redis down")
+            "agents.query_planner.get_redis_client", side_effect=Exception("Redis down")
         ):
             result = planner.classify("What?", [uuid.uuid4()])
         assert isinstance(result, ComplexityClassification)
@@ -176,7 +176,7 @@ class TestQueryPlannerDecompose:
         mock_conn.get.return_value = None
         mock_conn.set.side_effect = capture_set
 
-        with patch("agents.query_planner.redis_lib.Redis", return_value=mock_conn):
+        with patch("agents.query_planner.get_redis_client", return_value=mock_conn):
             planner.decompose("Same question", n=2)
             planner.decompose("Same question", n=4)
 

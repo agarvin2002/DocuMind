@@ -17,6 +17,15 @@ class AnalysisJob(models.Model):
         SIMPLE = "simple", "Simple Pass-Through"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    idempotency_key = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="SHA-256 fingerprint of (question, sorted document_ids, workflow_type). "
+        "Prevents duplicate jobs on client retries.",
+    )
     workflow_type = models.CharField(
         max_length=20, choices=WorkflowType.choices, db_index=True
     )

@@ -200,6 +200,7 @@ def generate_sub_answers_node(
     Generate an answer for each sub-question using its retrieved chunks.
     """
     sub_answers: list[str] = []
+    updated_sub_results: list[SubQueryResult] = []
     try:
         for sub_result in state["sub_results"]:
             answer = gen_tool.generate_answer(
@@ -207,13 +208,20 @@ def generate_sub_answers_node(
                 chunks=sub_result.chunks,
                 prompt_key="sub_answer",
             )
-            sub_result.answer = answer
+            updated_sub_results.append(
+                SubQueryResult(
+                    sub_question=sub_result.sub_question,
+                    document_id=sub_result.document_id,
+                    chunks=sub_result.chunks,
+                    answer=answer,
+                )
+            )
             sub_answers.append(answer)
         logger.info(
             "generate_sub_answers_node_complete",
             extra={"job_id": state["job_id"], "answer_count": len(sub_answers)},
         )
-        return {"sub_answers": sub_answers, "sub_results": state["sub_results"]}
+        return {"sub_answers": sub_answers, "sub_results": updated_sub_results}
     except SynthesisError as exc:
         logger.error(
             "generate_sub_answers_node_failed",
@@ -250,14 +258,17 @@ def synthesize_node(
         return {"error": str(exc)}
 
 
-def comparison_retrieve_node(
+def _retrieve_from_all_docs(
     state: AgentState,
     *,
     retrieval_tool: RetrievalToolPort,
+    log_prefix: str,
 ) -> dict:
     """
-    Retrieve chunks from every document in scope for comparison.
-    All chunks are pooled into retrieved_chunks.
+    Retrieve chunks from every document in state["document_ids"] and pool them.
+
+    Shared by comparison_retrieve_node and contradiction_retrieve_node — both
+    need the same retrieval logic; only the downstream generation prompt differs.
     """
     all_chunks = []
     try:
@@ -270,16 +281,27 @@ def comparison_retrieve_node(
             )
             all_chunks.extend(chunks)
         logger.info(
-            "comparison_retrieve_node_complete",
+            f"{log_prefix}_complete",
             extra={"job_id": state["job_id"], "total_chunks": len(all_chunks)},
         )
         return {"retrieved_chunks": all_chunks}
     except RetrievalAgentError as exc:
         logger.error(
-            "comparison_retrieve_node_failed",
+            f"{log_prefix}_failed",
             extra={"job_id": state["job_id"], "error": str(exc)},
         )
         return {"error": str(exc)}
+
+
+def comparison_retrieve_node(
+    state: AgentState,
+    *,
+    retrieval_tool: RetrievalToolPort,
+) -> dict:
+    """Retrieve chunks from every document in scope for comparison."""
+    return _retrieve_from_all_docs(
+        state, retrieval_tool=retrieval_tool, log_prefix="comparison_retrieve_node"
+    )
 
 
 def comparison_generate_node(
@@ -314,31 +336,10 @@ def contradiction_retrieve_node(
     *,
     retrieval_tool: RetrievalToolPort,
 ) -> dict:
-    """
-    Retrieve chunks from every document for contradiction detection.
-    Same retrieval logic as comparison — different generation prompt follows.
-    """
-    all_chunks = []
-    try:
-        for doc_id_str in state["document_ids"]:
-            doc_id = uuid.UUID(doc_id_str)
-            chunks = retrieval_tool.retrieve(
-                query=state["question"],
-                document_id=doc_id,
-                k=AGENT_COMPARISON_K,
-            )
-            all_chunks.extend(chunks)
-        logger.info(
-            "contradiction_retrieve_node_complete",
-            extra={"job_id": state["job_id"], "total_chunks": len(all_chunks)},
-        )
-        return {"retrieved_chunks": all_chunks}
-    except RetrievalAgentError as exc:
-        logger.error(
-            "contradiction_retrieve_node_failed",
-            extra={"job_id": state["job_id"], "error": str(exc)},
-        )
-        return {"error": str(exc)}
+    """Retrieve chunks from every document for contradiction detection."""
+    return _retrieve_from_all_docs(
+        state, retrieval_tool=retrieval_tool, log_prefix="contradiction_retrieve_node"
+    )
 
 
 def contradiction_detect_node(

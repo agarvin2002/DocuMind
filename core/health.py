@@ -6,6 +6,8 @@ Used by Docker health checks and load balancer readiness probes.
 """
 
 import logging
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as pkg_version
 
 import redis as redis_lib
 from django.conf import settings
@@ -20,6 +22,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
+
+
+def _get_version() -> str:
+    try:
+        return pkg_version("documind")
+    except PackageNotFoundError:
+        return "0.1.0"
 
 
 @api_view(["GET"])
@@ -77,7 +86,7 @@ def health_check(request):
         {
             "status": "healthy" if all_healthy else "unhealthy",
             "checks": checks,
-            "version": "0.1.0",
+            "version": _get_version(),
         },
         status=response_status,
     )

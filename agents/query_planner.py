@@ -19,7 +19,6 @@ import json
 import logging
 import uuid
 
-import redis as redis_lib
 from django.conf import settings
 
 from agents.constants import (
@@ -34,22 +33,10 @@ from agents.constants import (
 from agents.protocols import StructuredLLMPort
 from agents.schemas import ComplexityClassification, QueryDecomposition
 from analysis.exceptions import PlanningError
+from core.redis import get_redis_client
 from generation.prompts import get_agent_prompt
 
 logger = logging.getLogger(__name__)
-
-_redis_pool: redis_lib.ConnectionPool | None = None
-
-
-def _get_redis_pool() -> redis_lib.ConnectionPool:
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = redis_lib.ConnectionPool.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-    return _redis_pool
 
 
 def _question_hash(question: str) -> str:
@@ -173,7 +160,7 @@ class QueryPlanner:
 
     def _read_cache(self, key: str) -> dict | None:
         try:
-            conn = redis_lib.Redis(connection_pool=_get_redis_pool())
+            conn = get_redis_client()
             raw = conn.get(key)
             return json.loads(raw) if raw else None
         except Exception:  # noqa: BLE001
@@ -182,7 +169,7 @@ class QueryPlanner:
 
     def _write_cache(self, key: str, data: dict) -> None:
         try:
-            conn = redis_lib.Redis(connection_pool=_get_redis_pool())
+            conn = get_redis_client()
             conn.set(key, json.dumps(data), ex=AGENT_CACHE_TTL)
         except Exception:  # noqa: BLE001
             logger.warning("agent_planner_cache_write_failed", extra={"key": key})

@@ -9,6 +9,7 @@ services:
   postgres:
     image: pgvector/pgvector:pg16      # PostgreSQL 16 with pgvector pre-installed
     container_name: documind_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: documind
       POSTGRES_USER: documind
@@ -30,6 +31,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: documind_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"                    # your Mac can reach Redis at localhost:6379
     volumes:
@@ -48,6 +50,7 @@ services:
   flower:
     image: mher/flower:2.0
     container_name: documind_flower
+    restart: unless-stopped
     command: celery --broker=redis://redis:6379 flower --port=5555
     environment:
       FLOWER_BASIC_AUTH: "${FLOWER_USER}:${FLOWER_PASSWORD}"
@@ -71,6 +74,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: documind_ollama
+    restart: unless-stopped
     environment:
       # Keep the loaded model in memory indefinitely — prevents the 30-60s cold-start
       # penalty that occurs when Ollama unloads an idle model after 5 minutes.
@@ -96,6 +100,7 @@ services:
   minio:
     image: minio/minio:latest
     container_name: documind_minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: documind              # this is your "AWS Access Key" locally

@@ -44,26 +44,57 @@ def _make_job(**kwargs) -> AnalysisJob:
 @pytest.mark.django_db
 class TestCreateAnalysisJob:
     def test_returns_pending_job(self):
-        job = create_analysis_job(
+        job, created = create_analysis_job(
             workflow_type=AnalysisJob.WorkflowType.MULTI_HOP,
             input_data={"question": "q", "document_ids": []},
         )
         assert job.status == AnalysisJob.Status.PENDING
+        assert created is True
 
     def test_stores_input_data(self):
         payload = {"question": "how?", "document_ids": ["abc"]}
-        job = create_analysis_job(
+        job, _ = create_analysis_job(
             workflow_type=AnalysisJob.WorkflowType.SIMPLE,
             input_data=payload,
         )
         assert job.input_data == payload
 
     def test_persists_to_database(self):
-        job = create_analysis_job(
+        job, _ = create_analysis_job(
             workflow_type=AnalysisJob.WorkflowType.COMPARISON,
-            input_data={},
+            input_data={"question": "compare?", "document_ids": ["a", "b"]},
         )
         assert AnalysisJob.objects.filter(pk=job.id).exists()
+
+    def test_deduplicates_identical_requests(self):
+        input_data = {"question": "same?", "document_ids": ["doc-1"]}
+        job1, created1 = create_analysis_job(
+            workflow_type=AnalysisJob.WorkflowType.MULTI_HOP,
+            input_data=input_data,
+        )
+        job2, created2 = create_analysis_job(
+            workflow_type=AnalysisJob.WorkflowType.MULTI_HOP,
+            input_data=input_data,
+        )
+        assert created1 is True
+        assert created2 is False
+        assert job1.id == job2.id
+
+    def test_allows_new_job_after_failure(self):
+        input_data = {"question": "retry?", "document_ids": ["doc-2"]}
+        job1, _ = create_analysis_job(
+            workflow_type=AnalysisJob.WorkflowType.MULTI_HOP,
+            input_data=input_data,
+        )
+        job1.status = AnalysisJob.Status.FAILED
+        job1.save(update_fields=["status", "updated_at"])
+
+        job2, created2 = create_analysis_job(
+            workflow_type=AnalysisJob.WorkflowType.MULTI_HOP,
+            input_data=input_data,
+        )
+        assert created2 is True
+        assert job2.id != job1.id
 
 
 @pytest.mark.django_db
@@ -86,7 +117,7 @@ class TestMarkJobRunning:
 class TestMarkJobComplete:
     def test_sets_status_complete(self):
         job = _make_job()
-        with patch("analysis.services.redis_lib.Redis"):
+        with patch("analysis.services.get_redis_client"):
             mark_job_complete(job, {"final_answer": "42"})
         job.refresh_from_db()
         assert job.status == AnalysisJob.Status.COMPLETE
@@ -94,14 +125,14 @@ class TestMarkJobComplete:
     def test_stores_result_data(self):
         job = _make_job()
         result = {"final_answer": "the answer", "citations": []}
-        with patch("analysis.services.redis_lib.Redis"):
+        with patch("analysis.services.get_redis_client"):
             mark_job_complete(job, result)
         job.refresh_from_db()
         assert job.result_data == result
 
     def test_sets_completed_at(self):
         job = _make_job()
-        with patch("analysis.services.redis_lib.Redis"):
+        with patch("analysis.services.get_redis_client"):
             mark_job_complete(job, {})
         job.refresh_from_db()
         assert job.completed_at is not None
@@ -125,7 +156,7 @@ class TestMarkJobFailed:
 class TestCacheJobResult:
     def test_writes_json_to_redis(self):
         mock_conn = MagicMock()
-        with patch("analysis.services.redis_lib.Redis", return_value=mock_conn):
+        with patch("analysis.services.get_redis_client", return_value=mock_conn):
             _cache_job_result("job-123", {"answer": "42"})
         mock_conn.set.assert_called_once()
         call_args = mock_conn.set.call_args
@@ -134,7 +165,7 @@ class TestCacheJobResult:
 
     def test_redis_failure_is_non_fatal(self):
         with patch(
-            "analysis.services.redis_lib.Redis", side_effect=Exception("Redis down")
+            "analysis.services.get_redis_client", side_effect=Exception("Redis down")
         ):
             # Must not raise
             _cache_job_result("job-456", {"answer": "42"})
@@ -161,20 +192,20 @@ class TestGetCachedResult:
     def test_returns_dict_on_cache_hit(self):
         mock_conn = MagicMock()
         mock_conn.get.return_value = json.dumps({"answer": "cached"}).encode()
-        with patch("analysis.selectors.redis_lib.Redis", return_value=mock_conn):
+        with patch("analysis.selectors.get_redis_client", return_value=mock_conn):
             result = get_cached_result("job-123")
         assert result == {"answer": "cached"}
 
     def test_returns_none_on_cache_miss(self):
         mock_conn = MagicMock()
         mock_conn.get.return_value = None
-        with patch("analysis.selectors.redis_lib.Redis", return_value=mock_conn):
+        with patch("analysis.selectors.get_redis_client", return_value=mock_conn):
             result = get_cached_result("job-123")
         assert result is None
 
     def test_returns_none_on_redis_error(self):
         with patch(
-            "analysis.selectors.redis_lib.Redis", side_effect=Exception("Redis down")
+            "analysis.selectors.get_redis_client", side_effect=Exception("Redis down")
         ):
             result = get_cached_result("job-123")
         assert result is None

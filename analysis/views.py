@@ -71,10 +71,13 @@ class AnalysisJobCreateView(APIView):
             extra={"workflow_type": workflow_type, "document_count": len(document_ids)},
         )
 
-        job = create_analysis_job(workflow_type=workflow_type, input_data=input_data)
-        dispatch_analysis_task(job)
+        job, created = create_analysis_job(
+            workflow_type=workflow_type, input_data=input_data
+        )
+        if created:
+            dispatch_analysis_task(job)
 
-        # Step 4: return 202 — the job has been accepted but is not yet complete.
+        # Step 4: return 202 — the job has been accepted (new or deduplicated).
         return Response(AnalysisJobSerializer(job).data, status=202)
 
 

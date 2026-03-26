@@ -11,28 +11,14 @@ Usage:
 import json
 import logging
 
-import redis as redis_lib
-from django.conf import settings
 from django.db.models import QuerySet
 
 from agents.constants import AGENT_JOB_RESULT_CACHE_PREFIX
 from analysis.exceptions import AnalysisJobNotFoundError
 from analysis.models import AnalysisJob
+from core.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
-
-_redis_pool: redis_lib.ConnectionPool | None = None
-
-
-def _get_redis_pool() -> redis_lib.ConnectionPool:
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = redis_lib.ConnectionPool.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=2,
-            socket_timeout=2,
-        )
-    return _redis_pool
 
 
 def get_job_by_id(job_id: str) -> AnalysisJob:
@@ -74,7 +60,7 @@ def get_cached_result(job_id: str) -> dict | None:
     """
     key = f"{AGENT_JOB_RESULT_CACHE_PREFIX}{job_id}"
     try:
-        conn = redis_lib.Redis(connection_pool=_get_redis_pool())
+        conn = get_redis_client()
         raw = conn.get(key)
         if raw is None:
             return None
