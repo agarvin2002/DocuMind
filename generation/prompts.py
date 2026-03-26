@@ -3,6 +3,24 @@ from __future__ import annotations
 from generation.constants import CHARS_PER_TOKEN
 from retrieval.schemas import ChunkSearchResult
 
+# tiktoken encoding used for token counting — loaded once, reused per process.
+# Falls back to None if tiktoken is not installed or the model is unsupported
+# (e.g. Ollama local models); the chars/4 heuristic is used in that case.
+_tiktoken_encoding = None
+
+
+def _get_tiktoken_encoding():
+    global _tiktoken_encoding
+    if _tiktoken_encoding is None:
+        try:
+            import tiktoken
+
+            _tiktoken_encoding = tiktoken.get_encoding("cl100k_base")
+        except Exception:  # noqa: BLE001
+            _tiktoken_encoding = False  # sentinel: don't retry on future calls
+    return _tiktoken_encoding if _tiktoken_encoding is not False else None
+
+
 PROMPT_VERSION = "v1"
 
 _PROMPTS: dict[str, str] = {
@@ -26,7 +44,17 @@ def get_system_prompt(version: str = PROMPT_VERSION) -> str:
 
 
 def estimate_token_count(text: str) -> int:
-    """Rough token estimate: chars / CHARS_PER_TOKEN. Dependency-free."""
+    """
+    Estimate the token count of text.
+
+    Uses tiktoken (cl100k_base — GPT-4/3.5 encoding) when available, which is
+    accurate for OpenAI models and a reasonable approximation for Anthropic.
+    Falls back to the chars / CHARS_PER_TOKEN heuristic when tiktoken is not
+    installed or fails to load (e.g. in environments with only Ollama).
+    """
+    enc = _get_tiktoken_encoding()
+    if enc is not None:
+        return len(enc.encode(text))
     return len(text) // CHARS_PER_TOKEN
 
 
