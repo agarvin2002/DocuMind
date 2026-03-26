@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --dev
       - run: uv run python manage.py migrate
 
@@ -65,7 +65,7 @@ jobs:
 
       - name: Upload eval reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-reports-${{ github.sha }}
           path: eval_reports/
