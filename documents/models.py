@@ -83,7 +83,12 @@ class DocumentChunk(models.Model):
 
     class Meta:
         ordering = ["document", "chunk_index"]
-        unique_together = [["document", "chunk_index"]]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document", "chunk_index"],
+                name="documents_documentchunk_document_chunk_index_uniq",
+            )
+        ]
 
     def __str__(self):
         return f"Chunk {self.chunk_index} of {self.document.title}"
