@@ -517,7 +517,8 @@ class TestResolveCitations:
     def _resolve(self, answer_text: str, chunks: list) -> list:
         from query.services import _resolve_citations
 
-        return _resolve_citations(answer_text, chunks)
+        citations, _cleaned = _resolve_citations(answer_text, chunks)
+        return citations
 
     def test_duplicate_markers_deduplicated(self):
         chunk = _make_chunk("c1")
