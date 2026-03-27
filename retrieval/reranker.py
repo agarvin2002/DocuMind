@@ -16,6 +16,7 @@ Usage:
 """
 
 import logging
+import math
 import os
 from dataclasses import replace
 
@@ -101,6 +102,11 @@ class CrossEncoderReranker:
             scores: list[float] = self._model.predict(pairs).tolist()
         except Exception as e:  # noqa: BLE001
             raise RerankerError(f"Cross-encoder scoring failed: {e}") from e
+
+        # Cross-encoder can return NaN for empty or malformed chunk text.
+        # Replace with a very low score so affected chunks sort to the bottom
+        # and NaN never reaches the JSON serializer.
+        scores = [-10.0 if math.isnan(s) else s for s in scores]
 
         if len(scores) != len(candidates):
             raise RerankerError(

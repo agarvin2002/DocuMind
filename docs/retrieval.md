@@ -109,7 +109,7 @@ For each chunk that appears in one or more lists:
 | Constant | Default | Controlled By | Effect |
 |----------|---------|---------------|--------|
 | `RETRIEVAL_K` | 5 | `query/constants.py` | Final chunks returned to the LLM |
-| `RETRIEVAL_CANDIDATE_MULTIPLIER` | 3 | `retrieval/pipeline.py` | Each search returns `k * 3` candidates |
+| `RETRIEVAL_CANDIDATE_MULTIPLIER` | 3 | `core/settings.py` (env var `RETRIEVAL_CANDIDATE_MULTIPLIER`) | Each search returns `k * 3` candidates — the only retrieval constant that is runtime-configurable via environment variable |
 | `AGENT_RETRIEVAL_K` | (see `agents/constants.py`) | `agents/constants.py` | Chunks per sub-question in multi-hop |
 | `AGENT_COMPARISON_K` | (see `agents/constants.py`) | `agents/constants.py` | Chunks per document in comparison/contradiction |
 

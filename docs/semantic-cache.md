@@ -76,6 +76,8 @@ class Migration(migrations.Migration):
 
 HNSW provides approximate nearest-neighbor search in O(log n) rather than O(n) exact scan. The tradeoff: HNSW may miss a result that's technically within the distance threshold (it's approximate, not exact). The penalty for a false miss is one LLM call — the user gets a fresh answer, which is correct. This is acceptable.
 
+The same `atomic=False` migration pattern is used for the `DocumentChunk.embedding` HNSW index in `documents/migrations/0002_add_hnsw_index.py`.
+
 ## 7-Day TTL
 
 Cache entries are not deleted eagerly. The TTL is enforced at **read time**:
@@ -102,6 +104,8 @@ Two mechanisms, both automatic:
 2. **TTL expiry:** Entries older than `SEMANTIC_CACHE_TTL_DAYS` (7 days) are ignored on lookup. They remain in the DB but are never returned.
 
 There is no manual cache invalidation endpoint. This is intentional — the system is designed so that the only valid reason to invalidate would be document content changing, which is handled by document deletion + re-upload + CASCADE.
+
+**Updating a document's content:** There is no `PATCH`/`PUT` endpoint for documents — uploads are immutable once ingested. To update content: (1) delete the old `Document` record via Django admin (`/admin/documents/document/`) or the Django shell (`Document.objects.filter(id=...).delete()`), which cascades and deletes all its cache entries; (2) upload the new file via `POST /api/v1/documents/`. A `DELETE /api/v1/documents/{id}/` HTTP endpoint is not currently implemented — deletion is an administrative operation.
 
 ## Failure Mode
 

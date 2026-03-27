@@ -293,3 +293,22 @@ class TestCrossEncoderReranker:
         candidates = [_make_result("a"), _make_result("b")]
         with pytest.raises(RerankerError):
             reranker.rerank(query="test", candidates=candidates)
+
+    def test_nan_score_replaced_with_low_value(self):
+        # Cross-encoder can return NaN for empty/malformed chunk text.
+        # NaN must never reach the JSON serializer — reranker must sanitize it.
+        from retrieval.reranker import CrossEncoderReranker
+
+        reranker = CrossEncoderReranker()
+        mock_model = MagicMock()
+        mock_model.predict.return_value = MagicMock(tolist=lambda: [float("nan"), 5.0])
+        reranker._model = mock_model
+
+        candidates = [_make_result("a"), _make_result("b")]
+        results = reranker.rerank(query="test", candidates=candidates)
+
+        scores = [r.score for r in results]
+        assert all(not (s != s) for s in scores), "NaN scores must be replaced"
+        assert scores == sorted(scores, reverse=True), (
+            "Results must be sorted highest first"
+        )

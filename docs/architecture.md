@@ -132,6 +132,8 @@ Three layers, each with a distinct pattern:
 
 All fail-open paths log a `WARNING` with `extra={"error_type": type(e).__name__}` for observability.
 
+See also: [API Reference — Rate Limits](api-reference.md#rate-limits) and [Semantic Cache — Failure Mode](semantic-cache.md#failure-mode) for component-specific fail-open behavior.
+
 ## Observability Stack
 
 **Structured logging:** Every log line carries `request_id` (from `RequestIDFilter`), log level, module name, and any structured fields passed via `extra={...}`. Log format switches between human-readable (`verbose`) and machine-parseable JSON (`json`) via `LOG_FORMAT` env var. Same code path for both — only the formatter changes. In production, JSON goes to Datadog/CloudWatch/stdout.

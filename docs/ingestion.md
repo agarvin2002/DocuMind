@@ -61,6 +61,8 @@ Poll `GET /api/v1/documents/{id}/` until `status` is `ready` or `failed`. Typica
 
 **Upload limit:** `DOCUMIND_MAX_UPLOAD_SIZE_MB` env var (default 50MB). Enforced by DRF before the file reaches the ingestion pipeline.
 
+**Image-only and partially scanned PDFs:** `pypdf` can only extract text from PDFs with an embedded text layer. For scanned documents (images of pages with no text layer), `pypdf` returns empty strings per page. Single unreadable pages are skipped with a `WARNING` log and do not abort ingestion — the remaining pages are still processed. If the entire document produces no text chunks after parsing (fully image-only or encrypted), the pipeline transitions the document to `status=failed` with `error_message: "Document produced no text chunks — file may be image-only or empty"`. There is no OCR fallback in the current implementation.
+
 ## Hierarchical Chunking
 
 This is the most important design decision in the ingestion pipeline.
@@ -111,7 +113,13 @@ After embedding, `BM25Index.build(child_texts)` constructs a keyword search inde
 - Tokenizes with the same whitespace split as the chunker (identical tokenization at build and query time is essential)
 - Serialized with `pickle` and stored in Redis at key `bm25:{document_id}` with a 7-day TTL
 
-At retrieval time, the index is deserialized from Redis (~10ms for a typical document). If Redis is unavailable or the key has expired, the retrieval pipeline falls back gracefully (returns an empty keyword result list; the vector search results carry the full weight). The index is rebuilt on the next successful ingestion if the TTL expires.
+At retrieval time, the index is deserialized from Redis (~10ms for a typical document). If Redis is unavailable or the key has expired, the [retrieval pipeline falls back gracefully](retrieval.md#stage-2-bm25-keyword-search) — it returns an empty keyword result list and vector search carries the full weight for that request (no error is raised).
+
+**TTL expiry and rebuild:** The Redis key expires after 7 days. There is no background rebuild — the index is rebuilt only when the document is re-ingested via a new `ingest_document` Celery task. To force a rebuild without re-uploading the file, use the Django shell snippet in the [Debugging section](#debugging-a-failed-ingestion):
+```python
+mark_document_pending(document_id)
+ingest_document.delay(str(document_id))
+```
 
 **Why Redis:** The BM25 index is a serialized in-memory data structure, not relational data. Redis is the right store — fast serialization, automatic TTL, no schema needed.
 

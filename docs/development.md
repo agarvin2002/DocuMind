@@ -50,7 +50,7 @@ OPENAI_MODEL=gpt-4o
 
 # Anthropic
 ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-sonnet-4-5
+ANTHROPIC_MODEL=claude-sonnet-4-6-20251001
 
 # AWS Bedrock (separate from the S3/MinIO credentials above)
 BEDROCK_ENABLED=false

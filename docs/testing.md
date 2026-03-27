@@ -247,7 +247,7 @@ RAGAS measures retrieval and generation quality against a ground-truth Q&A datas
 # Prerequisites: docker compose up -d AND Django runserver + Celery worker running
 uv run python tests/evals/run_evals.py
 
-# Quick check with 3 samples (faster — good for local iteration)
+# Fast smoke test using only the first 3 Q&A pairs — does not count as a full eval run
 uv run python tests/evals/run_evals.py --dry-run
 
 # Force re-run (ignore cached results from previous run)
@@ -255,7 +255,7 @@ uv run python tests/evals/run_evals.py --no-cache
 ```
 
 The evaluator:
-1. Loads Q&A pairs from `data/eval/qa_pairs.json`
+1. Loads Q&A pairs from `data/eval/qa_pairs.json` (relative to project root — full run uses all pairs; `--dry-run` uses the first 3)
 2. Ingests three test PDFs (ai_concepts, product_spec, science_report) if not already present
 3. Runs every question through the full DocuMind pipeline
 4. Runs the same questions through a **naive BM25-only baseline** (no vector search, no reranker)
