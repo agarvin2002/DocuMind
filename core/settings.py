@@ -289,9 +289,23 @@ RERANKER_MODEL_NAME = env(
 RETRIEVAL_CANDIDATE_MULTIPLIER = env.int("RETRIEVAL_CANDIDATE_MULTIPLIER", default=3)
 # Enable NLTK stemming + stopword removal for BM25 keyword search.
 # Default False — keeps current behavior and avoids breaking existing Redis cache keys.
-# When enabling, bump _BM25_CACHE_KEY_PREFIX in documents/services.py to v2 to
+# When enabling, bump BM25_CACHE_KEY_PREFIX in documents/constants.py to v2 to
 # invalidate stale non-stemmed indexes before the new stemmed indexes are built.
 BM25_USE_STEMMING = env.bool("BM25_USE_STEMMING", default=False)
+# Timeout (seconds) for each concurrent search future (vector + keyword) in the
+# retrieval pipeline. Prevents a hung pgvector query from blocking a gunicorn
+# worker indefinitely. Raises concurrent.futures.TimeoutError when exceeded.
+RETRIEVAL_SEARCH_TIMEOUT_SECONDS = env.float(
+    "RETRIEVAL_SEARCH_TIMEOUT_SECONDS", default=5.0
+)
+
+# ---------------------------------------------------------------------------
+# Ingestion tuning
+# ---------------------------------------------------------------------------
+# Number of text chunks sent to SentenceTransformer.encode() in one call.
+# A lower batch size reduces peak RAM usage during ingestion; a higher batch
+# size improves GPU throughput. 32 is safe for CPU workers (all-MiniLM-L6-v2).
+EMBEDDING_BATCH_SIZE = env.int("EMBEDDING_BATCH_SIZE", default=32)
 
 # ---------------------------------------------------------------------------
 # Prompt versioning
