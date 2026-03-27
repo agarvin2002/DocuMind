@@ -18,6 +18,7 @@ from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 
 from analysis.exceptions import AgentError, AnalysisJobNotFoundError
+from analysis.models import AnalysisJob
 from analysis.selectors import get_job_by_id
 from analysis.services import mark_job_complete, mark_job_failed, mark_job_running
 from core.tasks import BaseDocuMindTask
@@ -56,10 +57,21 @@ def run_analysis_job(self, job_id_str: str) -> None:
         logger.error("run_analysis_job_not_found", extra={"job_id": job_id_str})
         return
 
-    # Step 2: mark RUNNING so the GET endpoint shows progress immediately.
+    # Step 2: idempotency guard — skip re-processing if the job already reached
+    # a terminal state. This protects against at-least-once Celery delivery: if
+    # mark_job_complete() wrote to DB but Redis failed and the task was re-queued,
+    # a second execution would overwrite the result with a different LLM answer.
+    if job.status not in (AnalysisJob.Status.PENDING, AnalysisJob.Status.RUNNING):
+        logger.info(
+            "run_analysis_job_skipped",
+            extra={"job_id": job_id_str, "status": job.status},
+        )
+        return
+
+    # Step 3: mark RUNNING so the GET endpoint shows progress immediately.
     mark_job_running(job)
 
-    # Step 3: run the agent. Every outcome is captured on the job record.
+    # Step 4: run the agent. Every outcome is captured on the job record.
     try:
         from agents.executor import run_analysis
 
