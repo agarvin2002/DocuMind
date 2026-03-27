@@ -28,6 +28,12 @@ RUN uv sync --frozen --no-dev
 # =============================================================================
 FROM python:3.12-slim
 
+# Install curl for the HEALTHCHECK probe, then clean up apt caches to keep the
+# image lean. Done as root before switching to the non-root user.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user — running as root in a container is a security risk
 RUN useradd --uid 1000 --no-create-home --shell /bin/false documind
 
@@ -46,6 +52,12 @@ ENV PATH="/app/.venv/bin:$PATH" \
 USER documind
 
 EXPOSE 8000
+
+# Allows container orchestrators (ECS, Kubernetes, Compose) to detect when the
+# web process has crashed or hung, and restart the container automatically.
+# start-period gives gunicorn time to start before the first probe fires.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/health/ || exit 1
 
 # gunicorn is the production WSGI server — never use `manage.py runserver` in production.
 # Workers=4 is a safe default for a CPU-bound workload on a 2-core machine.
