@@ -45,7 +45,14 @@ class AnalysisJob(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["status", "workflow_type"])]
+        indexes = [
+            models.Index(fields=["status", "workflow_type"]),
+            models.Index(fields=["created_at"], name="analysisjob_created_at_idx"),
+            models.Index(
+                fields=["status", "created_at"],
+                name="analysisjob_status_created_idx",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"AnalysisJob({self.id}, {self.workflow_type}, {self.status})"

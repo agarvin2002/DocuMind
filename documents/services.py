@@ -10,6 +10,7 @@ import uuid
 
 import redis as redis_lib
 from django.core.files.uploadedfile import UploadedFile
+from django.db import models
 
 from core.redis import get_redis_client
 from documents.exceptions import DocumentUploadError
@@ -92,6 +93,13 @@ def mark_document_ready(document_id: uuid.UUID, chunk_count: int) -> None:
     logger.info(
         "Document marked ready",
         extra={"document_id": str(document_id), "chunk_count": chunk_count},
+    )
+
+
+def mark_document_retrying(document_id: uuid.UUID) -> None:
+    """Increment retry_count. Called before each Celery retry attempt."""
+    Document.objects.filter(pk=document_id).update(
+        retry_count=models.F("retry_count") + 1
     )
 
 

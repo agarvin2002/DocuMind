@@ -44,6 +44,7 @@ class Document(models.Model):
 
     error_message = models.TextField(blank=True)
     chunk_count = models.PositiveIntegerField(default=0)
+    retry_count = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

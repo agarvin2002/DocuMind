@@ -16,6 +16,7 @@ from documents.services import (
     mark_document_failed,
     mark_document_processing,
     mark_document_ready,
+    mark_document_retrying,
     save_bm25_index,
     save_document_chunks,
 )
@@ -103,6 +104,7 @@ def ingest_document(self, document_id_str: str) -> None:
         # Transient: retry with exponential backoff — 30s, 60s, 120s.
         # If all retries are exhausted, mark FAILED so the user sees a clear status.
         try:
+            mark_document_retrying(document_id)
             raise self.retry(
                 exc=exc,
                 countdown=30 * (2 ** self.request.retries),

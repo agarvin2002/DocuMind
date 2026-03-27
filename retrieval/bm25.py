@@ -19,11 +19,47 @@ from rank_bm25 import BM25Okapi
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Stemming (optional — enabled via BM25_USE_STEMMING env var)
+# ---------------------------------------------------------------------------
+# Module-level cache so the stemmer and stopword set are loaded once per process.
+_stemmer = None
+_stopwords: set[str] | None = None
+
+
+def _get_stemmer_and_stopwords():
+    global _stemmer, _stopwords
+    if _stemmer is None:
+        import nltk
+        from nltk.corpus import stopwords as sw
+        from nltk.stem import PorterStemmer
+
+        for resource in ("corpora/stopwords", "tokenizers/punkt"):
+            try:
+                nltk.data.find(resource)
+            except LookupError:
+                nltk.download(resource.split("/")[1], quiet=True)
+
+        _stemmer = PorterStemmer()
+        _stopwords = set(sw.words("english"))
+    return _stemmer, _stopwords
+
+
+def _use_stemming() -> bool:
+    try:
+        from django.conf import settings
+
+        return bool(getattr(settings, "BM25_USE_STEMMING", False))
+    except Exception:  # noqa: BLE001
+        return False
+
 
 def _tokenize(text: str) -> list[str]:
-    # Simple whitespace tokenisation — lowercase + split.
-    # Stopwords and stemming are deferred pending retrieval quality benchmarks.
-    return text.lower().split()
+    tokens = text.lower().split()
+    if not _use_stemming():
+        return tokens
+    stemmer, stopwords = _get_stemmer_and_stopwords()
+    return [stemmer.stem(t) for t in tokens if t not in stopwords]
 
 
 class BM25Index:

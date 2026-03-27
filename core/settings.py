@@ -287,6 +287,11 @@ RERANKER_MODEL_NAME = env(
 # How many candidates (k * multiplier) to pass to the reranker before keeping top-k.
 # A wider pool improves recall; a narrower pool reduces reranker latency.
 RETRIEVAL_CANDIDATE_MULTIPLIER = env.int("RETRIEVAL_CANDIDATE_MULTIPLIER", default=3)
+# Enable NLTK stemming + stopword removal for BM25 keyword search.
+# Default False — keeps current behavior and avoids breaking existing Redis cache keys.
+# When enabling, bump _BM25_CACHE_KEY_PREFIX in documents/services.py to v2 to
+# invalidate stale non-stemmed indexes before the new stemmed indexes are built.
+BM25_USE_STEMMING = env.bool("BM25_USE_STEMMING", default=False)
 
 # ---------------------------------------------------------------------------
 # Prompt versioning

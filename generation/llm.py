@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -87,6 +88,10 @@ class OpenAIProvider:
     ) -> Iterator[str]:
         import openai
 
+        start = time.monotonic()
+        first_token_time: float | None = None
+        tokens_yielded = 0
+        success = False
         try:
             response = self._get_client().chat.completions.create(
                 model=self._model,
@@ -101,7 +106,11 @@ class OpenAIProvider:
             )
             for chunk in response:
                 if chunk.choices and chunk.choices[0].delta.content:
+                    if first_token_time is None:
+                        first_token_time = time.monotonic()
+                    tokens_yielded += 1
                     yield chunk.choices[0].delta.content
+            success = True
         except openai.RateLimitError as exc:
             raise AnswerGenerationError(f"OpenAI rate limit exceeded: {exc}") from exc
         except openai.BadRequestError as exc:
@@ -112,6 +121,20 @@ class OpenAIProvider:
             raise AnswerGenerationError(f"OpenAI request timed out: {exc}") from exc
         except openai.APIError as exc:
             raise AnswerGenerationError(f"OpenAI API error: {exc}") from exc
+        finally:
+            total_ms = (time.monotonic() - start) * 1000
+            ttft_ms = (first_token_time - start) * 1000 if first_token_time else None
+            logger.info(
+                "llm_stream_complete",
+                extra={
+                    "provider": "OpenAI",
+                    "model": self._model,
+                    "ttft_ms": round(ttft_ms, 1) if ttft_ms is not None else None,
+                    "tokens_yielded": tokens_yielded,
+                    "total_ms": round(total_ms, 1),
+                    "success": success,
+                },
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +172,10 @@ class AnthropicProvider:
     ) -> Iterator[str]:
         import anthropic
 
+        start = time.monotonic()
+        first_token_time: float | None = None
+        tokens_yielded = 0
+        success = False
         try:
             with self._get_client().messages.stream(
                 model=self._model,
@@ -158,7 +185,12 @@ class AnthropicProvider:
                 max_tokens=max_tokens,
                 timeout=timeout,
             ) as stream:
-                yield from stream.text_stream
+                for token in stream.text_stream:
+                    if first_token_time is None:
+                        first_token_time = time.monotonic()
+                    tokens_yielded += 1
+                    yield token
+            success = True
         except anthropic.RateLimitError as exc:
             raise AnswerGenerationError(
                 f"Anthropic rate limit exceeded: {exc}"
@@ -169,6 +201,20 @@ class AnthropicProvider:
             raise AnswerGenerationError(f"Anthropic request timed out: {exc}") from exc
         except anthropic.APIError as exc:
             raise AnswerGenerationError(f"Anthropic API error: {exc}") from exc
+        finally:
+            total_ms = (time.monotonic() - start) * 1000
+            ttft_ms = (first_token_time - start) * 1000 if first_token_time else None
+            logger.info(
+                "llm_stream_complete",
+                extra={
+                    "provider": "Anthropic",
+                    "model": self._model,
+                    "ttft_ms": round(ttft_ms, 1) if ttft_ms is not None else None,
+                    "tokens_yielded": tokens_yielded,
+                    "total_ms": round(total_ms, 1),
+                    "success": success,
+                },
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +291,10 @@ class BedrockProvider:
     ) -> Iterator[str]:
         import anthropic
 
+        start = time.monotonic()
+        first_token_time: float | None = None
+        tokens_yielded = 0
+        success = False
         try:
             with self._get_client().messages.stream(
                 model=self._model_id,
@@ -254,11 +304,30 @@ class BedrockProvider:
                 max_tokens=max_tokens,
                 timeout=timeout,
             ) as stream:
-                yield from stream.text_stream
+                for token in stream.text_stream:
+                    if first_token_time is None:
+                        first_token_time = time.monotonic()
+                    tokens_yielded += 1
+                    yield token
+            success = True
         except anthropic.APIError as exc:
             raise AnswerGenerationError(f"Bedrock API error: {exc}") from exc
         except Exception as exc:
             raise self._wrap_bedrock_error(exc) from exc
+        finally:
+            total_ms = (time.monotonic() - start) * 1000
+            ttft_ms = (first_token_time - start) * 1000 if first_token_time else None
+            logger.info(
+                "llm_stream_complete",
+                extra={
+                    "provider": "Bedrock",
+                    "model": self._model_id,
+                    "ttft_ms": round(ttft_ms, 1) if ttft_ms is not None else None,
+                    "tokens_yielded": tokens_yielded,
+                    "total_ms": round(total_ms, 1),
+                    "success": success,
+                },
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +373,10 @@ class OllamaProvider:
     ) -> Iterator[str]:
         import openai
 
+        start = time.monotonic()
+        first_token_time: float | None = None
+        tokens_yielded = 0
+        success = False
         try:
             response = self._get_client().chat.completions.create(
                 model=self._model,
@@ -318,7 +391,11 @@ class OllamaProvider:
             )
             for chunk in response:
                 if chunk.choices and chunk.choices[0].delta.content:
+                    if first_token_time is None:
+                        first_token_time = time.monotonic()
+                    tokens_yielded += 1
                     yield chunk.choices[0].delta.content
+            success = True
         except ConnectionError as exc:
             raise AnswerGenerationError(
                 f"Local Ollama is not running at {self._base_url}. "
@@ -331,6 +408,20 @@ class OllamaProvider:
             ) from exc
         except openai.APIError as exc:
             raise AnswerGenerationError(f"Ollama error: {exc}") from exc
+        finally:
+            total_ms = (time.monotonic() - start) * 1000
+            ttft_ms = (first_token_time - start) * 1000 if first_token_time else None
+            logger.info(
+                "llm_stream_complete",
+                extra={
+                    "provider": "Ollama",
+                    "model": self._model,
+                    "ttft_ms": round(ttft_ms, 1) if ttft_ms is not None else None,
+                    "tokens_yielded": tokens_yielded,
+                    "total_ms": round(total_ms, 1),
+                    "success": success,
+                },
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -345,12 +436,32 @@ class FallbackLLMClient:
     Design pattern: Chain of Responsibility.
     Adding a new provider requires zero changes to this class —
     just append it to the providers list in the composition root.
+
+    Circuit breaker: a provider that raises AnswerGenerationError is placed
+    in a cooldown window (default 60 s). During cooldown, the provider is
+    skipped without attempting a call so its timeout does not add latency.
+    All providers are tried as a last resort if every circuit is open.
     """
+
+    _CIRCUIT_BREAKER_COOLDOWN: float = 60.0  # seconds
 
     def __init__(self, providers: list[LLMProviderPort]) -> None:
         if not providers:
             raise ValueError("FallbackLLMClient requires at least one provider.")
         self._providers = providers
+        # Maps provider class name → monotonic time of last failure.
+        self._failure_times: dict[str, float] = {}
+
+    def _is_open(self, provider: LLMProviderPort) -> bool:
+        """Return True if this provider is in cooldown (circuit open, should skip)."""
+        last_fail = self._failure_times.get(type(provider).__name__)
+        if last_fail is None:
+            return False
+        return (time.monotonic() - last_fail) < self._CIRCUIT_BREAKER_COOLDOWN
+
+    def _trip(self, provider: LLMProviderPort) -> None:
+        """Record a failure and open the circuit for this provider."""
+        self._failure_times[type(provider).__name__] = time.monotonic()
 
     def stream(
         self,
@@ -361,8 +472,18 @@ class FallbackLLMClient:
         max_tokens: int,
         timeout: float,
     ) -> Iterator[str]:
+        # Prefer providers whose circuits are closed; fall back to open ones.
+        closed = [p for p in self._providers if not self._is_open(p)]
+        open_ = [p for p in self._providers if self._is_open(p)]
+        ordered = closed + open_
+
         last_exc: AnswerGenerationError | None = None
-        for i, provider in enumerate(self._providers):
+        for provider in ordered:
+            if self._is_open(provider):
+                logger.warning(
+                    "LLM provider circuit open, trying anyway (last resort)",
+                    extra={"provider": type(provider).__name__},
+                )
             try:
                 yield from provider.stream(
                     system_prompt=system_prompt,
@@ -378,18 +499,19 @@ class FallbackLLMClient:
                 return
             except AnswerGenerationError as exc:
                 last_exc = exc
-                if i < len(self._providers) - 1:
-                    logger.debug(
-                        "LLM provider failed, trying next",
-                        extra={
-                            "failed_provider": type(provider).__name__,
-                            "error_type": type(exc).__name__,
-                            "error": str(exc),
-                        },
-                    )
+                self._trip(provider)
+                logger.warning(
+                    "LLM provider failed, circuit tripped",
+                    extra={
+                        "failed_provider": type(provider).__name__,
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                        "cooldown_seconds": self._CIRCUIT_BREAKER_COOLDOWN,
+                    },
+                )
         logger.error(
             "All LLM providers failed",
-            extra={"providers_tried": [type(p).__name__ for p in self._providers]},
+            extra={"providers_tried": [type(p).__name__ for p in ordered]},
         )
         if last_exc is None:
             raise AnswerGenerationError(
