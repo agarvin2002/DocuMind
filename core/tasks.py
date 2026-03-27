@@ -31,9 +31,21 @@ class BaseDocuMindTask(Task):
     Automatically emits structured log entries on task failure, retry, and
     success so every task in the system has consistent observability without
     repeating logging boilerplate.
+
+    Restores the originating HTTP request ID from the Celery task header so
+    all log lines inside the task carry the same request_id as the view that
+    dispatched it — enabling end-to-end correlation across the async boundary.
     """
 
     abstract = True  # Celery will not register this class as a task itself.
+
+    def before_start(self, task_id, args, kwargs):
+        """Restore the X-Request-ID from the task header before execution begins."""
+        from core.middleware import set_current_request_id
+
+        request_id = (self.request.headers or {}).get("request_id", "-")
+        set_current_request_id(request_id)
+        super().before_start(task_id, args, kwargs)
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         logger.error(
