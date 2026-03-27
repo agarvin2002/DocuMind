@@ -20,6 +20,29 @@ from core.exceptions import StorageError
 logger = logging.getLogger(__name__)
 
 
+def _validate_storage_path(path: str) -> None:
+    """
+    Reject paths that could escape the storage bucket root.
+
+    S3-compatible APIs generally reject keys with ".." components, but
+    defending at the application layer ensures the constraint holds regardless
+    of the storage backend (MinIO, LocalStorage, Azure, etc.).
+
+    Args:
+        path: Storage-relative path to validate.
+
+    Raises:
+        ValueError: if the path contains traversal sequences or is absolute.
+    """
+    if not path:
+        raise ValueError("Storage path must not be empty")
+    parts = path.replace("\\", "/").split("/")
+    if ".." in parts:
+        raise ValueError(f"Storage path contains traversal sequence: {path!r}")
+    if path.startswith("/"):
+        raise ValueError(f"Storage path must be relative, not absolute: {path!r}")
+
+
 class StorageClient:
     """
     Wraps django-storages default_storage with consistent error handling.
@@ -46,8 +69,10 @@ class StorageClient:
             An open binary file-like object.
 
         Raises:
+            ValueError: if the path contains traversal sequences.
             StorageError: if the file cannot be opened.
         """
+        _validate_storage_path(path)
         from django.core.files.storage import default_storage
 
         try:
@@ -67,8 +92,10 @@ class StorageClient:
             path: Storage-relative path of the file to delete.
 
         Raises:
+            ValueError: if the path contains traversal sequences.
             StorageError: if the deletion fails.
         """
+        _validate_storage_path(path)
         from django.core.files.storage import default_storage
 
         try:
@@ -90,8 +117,10 @@ class StorageClient:
             path: Storage-relative path to check.
 
         Raises:
+            ValueError: if the path contains traversal sequences.
             StorageError: if the existence check itself fails.
         """
+        _validate_storage_path(path)
         from django.core.files.storage import default_storage
 
         try:
@@ -117,8 +146,10 @@ class StorageClient:
             expires_in_seconds: URL validity window (default 1 hour).
 
         Raises:
+            ValueError: if the path contains traversal sequences.
             StorageError: if the URL cannot be generated.
         """
+        _validate_storage_path(path)
         from django.core.files.storage import default_storage
 
         try:

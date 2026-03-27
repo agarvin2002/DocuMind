@@ -83,7 +83,15 @@ class RateLimiter:
 
     def __init__(self, redis_url: str | None = None) -> None:
         url = redis_url or settings.REDIS_URL
-        self._client = redis_lib.from_url(url, decode_responses=True)
+        # socket_connect_timeout and socket_timeout mirror core/redis.py so that
+        # a Redis hang blocks requests for at most 2 seconds instead of indefinitely.
+        # Without these, a Redis outage stalls every authenticated request.
+        self._client = redis_lib.from_url(
+            url,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
         self._script = self._client.register_script(_LUA_SCRIPT)
 
     def is_allowed(
