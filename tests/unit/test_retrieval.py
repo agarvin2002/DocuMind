@@ -309,4 +309,6 @@ class TestCrossEncoderReranker:
 
         scores = [r.score for r in results]
         assert all(not (s != s) for s in scores), "NaN scores must be replaced"
-        assert scores == sorted(scores, reverse=True), "Results must be sorted highest first"
+        assert scores == sorted(scores, reverse=True), (
+            "Results must be sorted highest first"
+        )
