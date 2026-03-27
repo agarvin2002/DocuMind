@@ -76,3 +76,26 @@ python_functions = ["test_*"]
 testpaths = ["tests"]
 addopts = "-v"
 timeout = 30
+
+# ---------------------------------------------------------------------------
+# Pyright — static type checker
+# ---------------------------------------------------------------------------
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+exclude = [
+    "**/__pycache__",
+    ".venv",
+    "**/migrations",
+    # Settings file uses django-environ which ships without type stubs —
+    # every env(...) call would be flagged as Unknown return type.
+    "core/settings.py",
+]
+
+# ---------------------------------------------------------------------------
+# Dev commands (run with uv run <tool>)
+#   uv run pytest tests/ -v
+#   uv run ruff check .
+#   uv run ruff format .
+#   uv run pyright .
+# ---------------------------------------------------------------------------
