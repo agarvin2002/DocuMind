@@ -107,7 +107,7 @@ def ingest_document(self, document_id_str: str) -> None:
             mark_document_retrying(document_id)
             raise self.retry(
                 exc=exc,
-                countdown=30 * (2 ** self.request.retries),
+                countdown=30 * (2**self.request.retries),
             )
         except MaxRetriesExceededError:
             mark_document_failed(

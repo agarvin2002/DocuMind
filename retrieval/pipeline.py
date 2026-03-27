@@ -111,8 +111,12 @@ class RetrievalPipeline:
                 self._keyword_search_fn, query, document_id, candidates_k
             )
             try:
-                vector_results = vector_future.result(timeout=self._search_timeout_seconds)
-                keyword_results = keyword_future.result(timeout=self._search_timeout_seconds)
+                vector_results = vector_future.result(
+                    timeout=self._search_timeout_seconds
+                )
+                keyword_results = keyword_future.result(
+                    timeout=self._search_timeout_seconds
+                )
             except FutureTimeoutError:
                 logger.error(
                     "Retrieval search timed out",

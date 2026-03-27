@@ -422,11 +422,35 @@ LOGGING = {
         # Suppress DEBUG/INFO noise from upstream ML and HTTP libraries.
         # Without these, local dev logs are dominated by transformer downloads,
         # HTTP wire traces, and HuggingFace cache messages.
-        "langchain": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
-        "langchain_core": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
-        "transformers": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
-        "sentence_transformers": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
-        "httpx": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
-        "huggingface_hub": {"handlers": ["console", "file"], "level": "WARNING", "propagate": False},
+        "langchain": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "langchain_core": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "transformers": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "sentence_transformers": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "httpx": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "huggingface_hub": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }

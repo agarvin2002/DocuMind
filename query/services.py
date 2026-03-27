@@ -307,13 +307,17 @@ def _resolve_citations(
                 chunk_id=str(chunk.chunk_id),
                 document_title=chunk.document_title,
                 page_number=chunk.page_number,
-                quote=_truncate_at_sentence(chunk.parent_text, CITATION_QUOTE_MAX_CHARS),
+                quote=_truncate_at_sentence(
+                    chunk.parent_text, CITATION_QUOTE_MAX_CHARS
+                ),
             )
         )
 
     # Strip markers that could not be resolved so the client text is clean.
     # A marker is valid only if its index falls within the retrieved chunks.
-    valid_indices: set[int] = {int(m) - 1 for m in markers if 0 <= int(m) - 1 < len(chunks)}
+    valid_indices: set[int] = {
+        int(m) - 1 for m in markers if 0 <= int(m) - 1 < len(chunks)
+    }
 
     def _replace_marker(match: re.Match) -> str:
         idx = int(match.group(1)) - 1
