@@ -43,6 +43,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       LOG_FORMAT: verbose
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RAGAS_JUDGE_PROVIDER: openai
       RAGAS_LLM_MODEL: gpt-4o-mini
       EVAL_DATASET_PATH: data/eval/qa_pairs.json
 

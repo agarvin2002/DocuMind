@@ -13,6 +13,7 @@ All business logic lives in analysis/services.py and analysis/selectors.py.
 
 import logging
 
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -50,11 +51,12 @@ class AnalysisJobCreateView(APIView):
         data = serializer.validated_data
         document_ids = data["document_ids"]
 
-        # Step 2: validate all document IDs exist before creating the job.
+        # Step 2: validate all document IDs exist and belong to the caller.
+        # Scoping by api_key prevents cross-key analysis of another user's documents.
         # Fail fast with a clear 404 rather than letting the Celery task fail silently.
         try:
             for doc_id in document_ids:
-                get_document_by_id(doc_id)
+                get_document_by_id(doc_id, api_key=request.auth)
         except DocumentNotFoundError as exc:
             return Response({"detail": str(exc)}, status=exc.http_status_code)
 
@@ -77,8 +79,11 @@ class AnalysisJobCreateView(APIView):
         if created:
             dispatch_analysis_task(job)
 
-        # Step 4: return 202 — the job has been accepted (new or deduplicated).
-        return Response(AnalysisJobSerializer(job).data, status=202)
+        # Step 4: return the appropriate status code.
+        # 202 Accepted — new job created and dispatched for async processing.
+        # 200 OK       — deduplicated: returning an existing job, no new work queued.
+        response_status = status.HTTP_202_ACCEPTED if created else status.HTTP_200_OK
+        return Response(AnalysisJobSerializer(job).data, status=response_status)
 
 
 class AnalysisJobDetailView(APIView):

@@ -27,6 +27,7 @@ Usage:
 import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 
 from retrieval.hybrid import HybridFusion
 from retrieval.protocols import (
@@ -57,6 +58,7 @@ class RetrievalPipeline:
         keyword_search_fn: KeywordSearchPort,
         reranker: RerankerPort,
         candidate_multiplier: int = 3,
+        search_timeout_seconds: float = 5.0,
     ) -> None:
         self._embedder = embedder
         self._vector_store = VectorStore(search_fn=vector_search_fn)
@@ -64,6 +66,7 @@ class RetrievalPipeline:
         self._reranker = reranker
         self._fusion = HybridFusion()
         self._candidate_multiplier = candidate_multiplier
+        self._search_timeout_seconds = search_timeout_seconds
 
     def run(
         self,
@@ -98,6 +101,8 @@ class RetrievalPipeline:
 
         # Vector search (pgvector DB round-trip) and keyword search (Redis + BM25) are
         # independent — run them concurrently to cut wall-clock latency by ~50–150ms.
+        # The timeout prevents a hung pgvector query or Redis call from blocking a
+        # gunicorn worker indefinitely (search_timeout_seconds from settings).
         with ThreadPoolExecutor(max_workers=2) as executor:
             vector_future = executor.submit(
                 self._vector_store.search, embedding, document_id, candidates_k
@@ -105,8 +110,22 @@ class RetrievalPipeline:
             keyword_future = executor.submit(
                 self._keyword_search_fn, query, document_id, candidates_k
             )
-            vector_results = vector_future.result()
-            keyword_results = keyword_future.result()
+            try:
+                vector_results = vector_future.result(
+                    timeout=self._search_timeout_seconds
+                )
+                keyword_results = keyword_future.result(
+                    timeout=self._search_timeout_seconds
+                )
+            except FutureTimeoutError:
+                logger.error(
+                    "Retrieval search timed out",
+                    extra={
+                        "document_id": str(document_id),
+                        "timeout_seconds": self._search_timeout_seconds,
+                    },
+                )
+                raise
 
         fused_results = self._fusion.fuse(vector_results, keyword_results)
         reranked_results = self._reranker.rerank(query, fused_results)

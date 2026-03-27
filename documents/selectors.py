@@ -12,6 +12,7 @@ import redis as redis_lib
 from pgvector.django import CosineDistance
 
 from core.redis import get_redis_client
+from documents.constants import BM25_CACHE_KEY_PREFIX, BM25_INDEX_TTL_SECONDS
 from documents.exceptions import DocumentNotFoundError
 from documents.models import Document, DocumentChunk
 from retrieval.bm25 import BM25Index
@@ -20,26 +21,45 @@ from retrieval.schemas import ChunkSearchResult
 logger = logging.getLogger(__name__)
 
 
-def get_document_by_id(document_id: uuid.UUID) -> Document:
+def get_document_by_id(document_id: uuid.UUID, *, api_key=None) -> Document:
     """
     Fetch a single Document by primary key.
 
+    When api_key is provided the query is scoped to that key's documents,
+    preventing cross-key information disclosure (C-1 authorization fix).
+
+    Args:
+        document_id: UUID of the document to fetch.
+        api_key: Optional APIKey instance. When set, only returns the document
+                 if it belongs to this key.
+
     Raises:
-        DocumentNotFoundError: if no Document with that ID exists.
+        DocumentNotFoundError: if no Document with that ID exists, or if it
+                               exists but belongs to a different API key.
     """
     try:
-        return Document.objects.get(pk=document_id)
+        qs = Document.objects.filter(pk=document_id)
+        if api_key is not None:
+            qs = qs.filter(api_key=api_key)
+        return qs.get()
     except Document.DoesNotExist:
         raise DocumentNotFoundError(f"Document {document_id} not found")
 
 
-def list_documents(status: str | None = None):
+def list_documents(status: str | None = None, *, api_key=None):
     """
-    Return all Documents, optionally filtered by status.
+    Return Documents, optionally filtered by status and/or owning API key.
 
+    When api_key is provided only that key's documents are returned.
     Returns a lazy QuerySet so callers can chain further filters if needed.
+
+    Args:
+        status: Optional Document.Status value to filter by.
+        api_key: Optional APIKey instance for per-key isolation.
     """
     qs = Document.objects.all().order_by("-created_at")
+    if api_key is not None:
+        qs = qs.filter(api_key=api_key)
     if status is not None:
         qs = qs.filter(status=status)
     return qs
@@ -151,13 +171,13 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
     """
     Load the BM25 index for a document from Redis, rebuilding from DB if missing.
 
-    Redis key: documind:bm25:v1:{document_id}
-    TTL: 7 days (604800 seconds)
+    Redis key: BM25_CACHE_KEY_PREFIX:{document_id}
+    TTL: BM25_INDEX_TTL_SECONDS (7 days)
 
     Redis failures are non-fatal — the index is rebuilt from the database and
     the search continues. A warning is logged so the gap is visible in monitoring.
     """
-    redis_key = f"documind:bm25:v1:{document_id}"
+    redis_key = f"{BM25_CACHE_KEY_PREFIX}:{document_id}"
     cached = None
 
     try:
@@ -189,7 +209,7 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
 
     try:
         r = get_redis_client()
-        r.setex(redis_key, 604800, bm25_index.serialize())
+        r.setex(redis_key, BM25_INDEX_TTL_SECONDS, bm25_index.serialize())
     except redis_lib.RedisError as e:
         logger.warning(
             "Failed to cache rebuilt BM25 index in Redis",

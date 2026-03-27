@@ -22,6 +22,17 @@ def get_current_request_id() -> str | None:
     return getattr(_request_id_store, "request_id", None)
 
 
+def set_current_request_id(request_id: str | None) -> None:
+    """
+    Set the request ID for the current thread.
+
+    Called by BaseDocuMindTask.before_start() to restore the originating
+    HTTP request ID inside a Celery worker thread so that all log lines
+    produced by the task carry the same request_id as the triggering request.
+    """
+    _request_id_store.request_id = request_id
+
+
 class RequestIDMiddleware:
     """
     Generates or forwards a request ID for every HTTP request.

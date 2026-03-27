@@ -277,6 +277,66 @@ AGENT_LLM_TIMEOUT_SECONDS = env.float("AGENT_LLM_TIMEOUT_SECONDS", default=200.0
 DOCUMIND_MAX_CONTEXT_TOKENS = env.int("DOCUMIND_MAX_CONTEXT_TOKENS", default=6000)
 
 # ---------------------------------------------------------------------------
+# Retrieval tuning
+# ---------------------------------------------------------------------------
+# Cross-encoder model used to rerank retrieved candidates.
+# Must be a HuggingFace cross-encoder model compatible with sentence-transformers.
+RERANKER_MODEL_NAME = env(
+    "RERANKER_MODEL_NAME", default="cross-encoder/ms-marco-MiniLM-L-6-v2"
+)
+# How many candidates (k * multiplier) to pass to the reranker before keeping top-k.
+# A wider pool improves recall; a narrower pool reduces reranker latency.
+RETRIEVAL_CANDIDATE_MULTIPLIER = env.int("RETRIEVAL_CANDIDATE_MULTIPLIER", default=3)
+# Enable NLTK stemming + stopword removal for BM25 keyword search.
+# Default False — keeps current behavior and avoids breaking existing Redis cache keys.
+# When enabling, bump BM25_CACHE_KEY_PREFIX in documents/constants.py to v2 to
+# invalidate stale non-stemmed indexes before the new stemmed indexes are built.
+BM25_USE_STEMMING = env.bool("BM25_USE_STEMMING", default=False)
+# Timeout (seconds) for each concurrent search future (vector + keyword) in the
+# retrieval pipeline. Prevents a hung pgvector query from blocking a gunicorn
+# worker indefinitely. Raises concurrent.futures.TimeoutError when exceeded.
+RETRIEVAL_SEARCH_TIMEOUT_SECONDS = env.float(
+    "RETRIEVAL_SEARCH_TIMEOUT_SECONDS", default=5.0
+)
+
+# ---------------------------------------------------------------------------
+# Ingestion tuning
+# ---------------------------------------------------------------------------
+# Number of text chunks sent to SentenceTransformer.encode() in one call.
+# A lower batch size reduces peak RAM usage during ingestion; a higher batch
+# size improves GPU throughput. 32 is safe for CPU workers (all-MiniLM-L6-v2).
+EMBEDDING_BATCH_SIZE = env.int("EMBEDDING_BATCH_SIZE", default=32)
+
+# ---------------------------------------------------------------------------
+# Prompt versioning
+# ---------------------------------------------------------------------------
+# Active system prompt version served to the RAG pipeline.
+# Allows A/B testing prompts across environments without a code change.
+DOCUMIND_PROMPT_VERSION = env("DOCUMIND_PROMPT_VERSION", default="v1")
+
+# ---------------------------------------------------------------------------
+# Semantic cache
+# ---------------------------------------------------------------------------
+# Cosine similarity threshold (0.0–1.0) for a cache hit.
+# Higher = more precise (fewer false hits); lower = more aggressive caching.
+# Legal / compliance documents should use ≥0.95; general-purpose can use 0.90.
+SEMANTIC_CACHE_SIMILARITY_THRESHOLD = env.float(
+    "SEMANTIC_CACHE_SIMILARITY_THRESHOLD", default=0.92
+)
+SEMANTIC_CACHE_TTL_DAYS = env.int("SEMANTIC_CACHE_TTL_DAYS", default=7)
+
+# ---------------------------------------------------------------------------
+# Agent pipeline tuning
+# ---------------------------------------------------------------------------
+# Token limits for LLM calls inside agent nodes.
+# Sized for local Ollama (qwen2.5:3b ≈ 9 tok/s); production GPT-4o never
+# approaches these limits (200 tok/s), so they do not need to be reduced there.
+AGENT_SYNTHESIS_MAX_TOKENS = env.int("AGENT_SYNTHESIS_MAX_TOKENS", default=1000)
+AGENT_SUBQUERY_MAX_TOKENS = env.int("AGENT_SUBQUERY_MAX_TOKENS", default=1000)
+# Number of chunks retrieved per sub-question in multi-hop workflows.
+AGENT_RETRIEVAL_K = env.int("AGENT_RETRIEVAL_K", default=5)
+
+# ---------------------------------------------------------------------------
 # LangSmith — LLM observability (no-op when LANGCHAIN_TRACING_V2=false)
 # ---------------------------------------------------------------------------
 LANGCHAIN_TRACING_V2 = env.bool("LANGCHAIN_TRACING_V2", default=False)
@@ -356,6 +416,39 @@ LOGGING = {
         },
         "django": {
             "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        # Suppress DEBUG/INFO noise from upstream ML and HTTP libraries.
+        # Without these, local dev logs are dominated by transformer downloads,
+        # HTTP wire traces, and HuggingFace cache messages.
+        "langchain": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "langchain_core": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "transformers": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "sentence_transformers": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "httpx": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "huggingface_hub": {
+            "handlers": ["console", "file"],
             "level": "WARNING",
             "propagate": False,
         },

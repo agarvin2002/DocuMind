@@ -60,6 +60,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             "status",
             "error_message",
             "chunk_count",
+            "retry_count",
             "created_at",
             "updated_at",
         ]

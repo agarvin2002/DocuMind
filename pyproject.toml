@@ -38,6 +38,7 @@ dependencies = [
     "requests>=2.33.0",
     "ragas>=0.4.3",
     "datasets>=4.8.3",
+    "nltk>=3.9.4",
 ]
 
 [dependency-groups]
@@ -45,6 +46,7 @@ dev = [
     "pytest>=8.0",
     "pytest-django>=4.8",
     "pytest-cov>=5.0",
+    "pytest-timeout>=2.3",
     "ruff>=0.15.5",
     "fpdf2>=2.7",
     # Pin to last unaffected release — CVE-2026-4539 affects all 2.19.x.
@@ -73,3 +75,27 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
 addopts = "-v"
+timeout = 30
+
+# ---------------------------------------------------------------------------
+# Pyright — static type checker
+# ---------------------------------------------------------------------------
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+exclude = [
+    "**/__pycache__",
+    ".venv",
+    "**/migrations",
+    # Settings file uses django-environ which ships without type stubs —
+    # every env(...) call would be flagged as Unknown return type.
+    "core/settings.py",
+]
+
+# ---------------------------------------------------------------------------
+# Dev commands (run with uv run <tool>)
+#   uv run pytest tests/ -v
+#   uv run ruff check .
+#   uv run ruff format .
+#   uv run pyright .
+# ---------------------------------------------------------------------------

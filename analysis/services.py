@@ -42,7 +42,10 @@ def _compute_idempotency_key(
         },
         sort_keys=True,
     )
-    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+    # 32 hex chars = 128-bit key space. The birthday collision probability
+    # reaches 50% only at ~1.8 × 10^19 jobs — safe at any realistic scale.
+    # The previous [:16] (64-bit) was acceptable but unnecessarily narrow.
+    return hashlib.sha256(canonical.encode()).hexdigest()[:32]
 
 
 def create_analysis_job(
@@ -112,6 +115,10 @@ def dispatch_analysis_task(job: AnalysisJob) -> None:
     """
     Send the run_analysis_job Celery task for the given job.
 
+    Passes the current X-Request-ID as a Celery task header so the worker
+    can restore it in BaseDocuMindTask.before_start() and all log lines
+    within the task carry the same request_id as the originating HTTP request.
+
     Local imports break the circular chain:
         services → tasks → executor → graph → (back to services for status updates)
 
@@ -120,9 +127,14 @@ def dispatch_analysis_task(job: AnalysisJob) -> None:
     """
     from celery import current_app
 
+    from core.middleware import get_current_request_id
     from core.task_names import RUN_ANALYSIS_JOB
 
-    current_app.send_task(RUN_ANALYSIS_JOB, args=[str(job.id)])
+    current_app.send_task(
+        RUN_ANALYSIS_JOB,
+        args=[str(job.id)],
+        headers={"request_id": get_current_request_id() or "-"},
+    )
     logger.info("analysis_job_dispatched", extra={"job_id": str(job.id)})
 
 

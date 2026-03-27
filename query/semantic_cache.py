@@ -10,16 +10,11 @@ import logging
 import uuid
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
 from pgvector.django import CosineDistance
 
-from query.constants import SEMANTIC_CACHE_SIMILARITY_THRESHOLD, SEMANTIC_CACHE_TTL_DAYS
-
 logger = logging.getLogger(__name__)
-
-# Convert similarity threshold (0.92) to distance threshold (0.08).
-# pgvector's <=> operator returns cosine distance, not similarity.
-_DISTANCE_THRESHOLD = 1.0 - SEMANTIC_CACHE_SIMILARITY_THRESHOLD
 
 
 class SemanticCache:
@@ -48,8 +43,13 @@ class SemanticCache:
             from query.models import SemanticCacheEntry
             from query.services import _get_embedder
 
+            # Read at call-time so env-var overrides take effect without restart.
+            # pgvector uses distance (0 = identical), so convert similarity → distance.
+            distance_threshold = 1.0 - settings.SEMANTIC_CACHE_SIMILARITY_THRESHOLD
+            ttl_days = settings.SEMANTIC_CACHE_TTL_DAYS
+
             query_embedding = _get_embedder().embed_single(query)
-            cutoff = timezone.now() - timedelta(days=SEMANTIC_CACHE_TTL_DAYS)
+            cutoff = timezone.now() - timedelta(days=ttl_days)
 
             entry = (
                 SemanticCacheEntry.objects.filter(
@@ -57,7 +57,7 @@ class SemanticCache:
                     created_at__gte=cutoff,
                 )
                 .annotate(distance=CosineDistance("embedding", query_embedding))
-                .filter(distance__lte=_DISTANCE_THRESHOLD)
+                .filter(distance__lte=distance_threshold)
                 .order_by("distance")
                 .first()
             )

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import IO
 
 from ingestion.chunkers import ChunkData, HierarchicalChunker
-from ingestion.embedders import SentenceTransformerEmbedder
+from ingestion.embedders import get_embedder
 from ingestion.parsers import ParseError, get_parser
 from ingestion.protocols import ChunkerProtocol, EmbedderProtocol
 from retrieval.bm25 import BM25Index
@@ -61,7 +61,10 @@ class IngestionPipeline:
         # Defaults are constructed here rather than as argument defaults
         # to avoid instantiating the embedding model at import time.
         self._chunker: ChunkerProtocol = chunker or HierarchicalChunker()
-        self._embedder: EmbedderProtocol = embedder or SentenceTransformerEmbedder()
+        # get_embedder() returns the process-level singleton so the ~90MB model
+        # is loaded once per Celery worker, not once per task execution.
+        # Tests may inject a lightweight fake via the embedder= parameter.
+        self._embedder: EmbedderProtocol = embedder or get_embedder()
 
     def run(
         self,

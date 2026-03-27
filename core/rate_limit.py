@@ -22,6 +22,7 @@ Why fail open on Redis error?
 import logging
 import time
 import uuid
+from typing import cast
 
 import redis as redis_lib
 from django.conf import settings
@@ -83,7 +84,15 @@ class RateLimiter:
 
     def __init__(self, redis_url: str | None = None) -> None:
         url = redis_url or settings.REDIS_URL
-        self._client = redis_lib.from_url(url, decode_responses=True)
+        # socket_connect_timeout and socket_timeout mirror core/redis.py so that
+        # a Redis hang blocks requests for at most 2 seconds instead of indefinitely.
+        # Without these, a Redis outage stalls every authenticated request.
+        self._client = redis_lib.from_url(
+            url,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
         self._script = self._client.register_script(_LUA_SCRIPT)
 
     def is_allowed(
@@ -102,9 +111,12 @@ class RateLimiter:
         request_id = uuid.uuid4().hex
 
         try:
-            result = self._script(
-                keys=[key],
-                args=[now_ms, window_start_ms, limit, ttl, request_id],
+            result = cast(
+                list[int],
+                self._script(
+                    keys=[key],
+                    args=[now_ms, window_start_ms, limit, ttl, request_id],
+                ),
             )
         except redis_lib.RedisError as exc:
             # Fail open: prefer availability over strict rate-limiting during

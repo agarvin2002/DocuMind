@@ -20,6 +20,7 @@ import os
 from dataclasses import replace
 
 from core.exceptions import DocuMindError
+from retrieval.constants import RERANKER_MAX_CANDIDATES
 from retrieval.schemas import ChunkSearchResult
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,16 @@ class CrossEncoderReranker:
         """
         if not candidates:
             return []
+
+        if len(candidates) > RERANKER_MAX_CANDIDATES:
+            logger.warning(
+                "Reranker candidate list truncated",
+                extra={
+                    "original_count": len(candidates),
+                    "max": RERANKER_MAX_CANDIDATES,
+                },
+            )
+            candidates = candidates[:RERANKER_MAX_CANDIDATES]
 
         self._load_model()
 

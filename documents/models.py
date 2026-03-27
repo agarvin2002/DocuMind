@@ -29,6 +29,18 @@ class Document(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=500)
 
+    # Owning API key — used to enforce per-key document isolation.
+    # SET_NULL (not CASCADE) so an API key can be revoked without wiping documents;
+    # db_index speeds up the ownership filter on GET /api/v1/documents/{id}/.
+    api_key = models.ForeignKey(
+        "authentication.APIKey",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="documents",
+        db_index=True,
+    )
+
     # File bytes live in MinIO/S3; only the path is stored here.
     file = models.FileField(upload_to="documents/%Y/%m/")
     original_filename = models.CharField(max_length=500)
@@ -44,6 +56,7 @@ class Document(models.Model):
 
     error_message = models.TextField(blank=True)
     chunk_count = models.PositiveIntegerField(default=0)
+    retry_count = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

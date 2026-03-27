@@ -10,8 +10,10 @@ import uuid
 
 import redis as redis_lib
 from django.core.files.uploadedfile import UploadedFile
+from django.db import models
 
 from core.redis import get_redis_client
+from documents.constants import BM25_CACHE_KEY_PREFIX, BM25_INDEX_TTL_SECONDS
 from documents.exceptions import DocumentUploadError
 from documents.models import Document, DocumentChunk
 from ingestion.chunkers import ChunkData
@@ -25,12 +27,21 @@ def create_document(
     title: str,
     original_filename: str,
     file_type: str,
+    api_key=None,
 ) -> Document:
     """
     Persist a new Document record and upload the file to S3/MinIO.
 
     django-storages handles the file transfer to S3/MinIO automatically
     when doc.file.save() is called — we never call the S3 API directly.
+
+    Args:
+        file: The uploaded file object.
+        title: Human-readable document title.
+        original_filename: Original filename from the upload.
+        file_type: File extension including leading dot (e.g. ".pdf").
+        api_key: The APIKey instance that owns this document. Used by
+                 selectors to enforce per-key isolation on GET requests.
 
     Raises:
         DocumentUploadError: if the file cannot be saved to storage.
@@ -42,6 +53,7 @@ def create_document(
             file_type=file_type,
             file_size=file.size,
             status=Document.Status.PENDING,
+            api_key=api_key,
         )
         doc.file.save(original_filename, file, save=True)
     except Exception as e:  # noqa: BLE001
@@ -66,12 +78,20 @@ def trigger_ingestion(document_id: uuid.UUID) -> None:
     """
     Dispatch the Celery ingestion task for a document.
 
+    Passes the current X-Request-ID as a Celery task header so the worker
+    can restore it in BaseDocuMindTask.before_start() and all log lines
+    within the task carry the same request_id as the originating HTTP request.
+
     The task import is local to this function to avoid a circular import:
     services → tasks → pipeline → vector_store → DocumentChunk → (back to services).
     """
+    from core.middleware import get_current_request_id
     from documents.tasks import ingest_document  # local import — breaks circular chain
 
-    ingest_document.delay(str(document_id))
+    ingest_document.apply_async(
+        args=[str(document_id)],
+        headers={"request_id": get_current_request_id() or "-"},
+    )
     logger.info(
         "Ingestion task dispatched",
         extra={"document_id": str(document_id)},
@@ -92,6 +112,13 @@ def mark_document_ready(document_id: uuid.UUID, chunk_count: int) -> None:
     logger.info(
         "Document marked ready",
         extra={"document_id": str(document_id), "chunk_count": chunk_count},
+    )
+
+
+def mark_document_retrying(document_id: uuid.UUID) -> None:
+    """Increment retry_count. Called before each Celery retry attempt."""
+    Document.objects.filter(pk=document_id).update(
+        retry_count=models.F("retry_count") + 1
     )
 
 
@@ -151,9 +178,18 @@ def save_document_chunks(
         for chunk, embedding in zip(chunks, embeddings)
     ]
 
-    # bulk_create writes all rows in a single SQL statement — far fewer round-trips
-    # than calling .save() once per chunk, which matters at scale.
-    DocumentChunk.objects.bulk_create(chunk_objects, batch_size=500)
+    # update_conflicts=True makes this call idempotent: if the task is retried
+    # after chunks were already written (e.g. BM25 Redis write failed), the
+    # INSERT becomes an UPDATE and no IntegrityError is raised.
+    # Without this, a retry would hit the UniqueConstraint(document, chunk_index)
+    # and permanently FAILED-mark a document whose data is actually good.
+    DocumentChunk.objects.bulk_create(
+        chunk_objects,
+        batch_size=500,
+        update_conflicts=True,
+        unique_fields=["document", "chunk_index"],
+        update_fields=["child_text", "parent_text", "page_number", "embedding"],
+    )
 
     logger.info(
         "Document chunks saved",
@@ -163,18 +199,18 @@ def save_document_chunks(
 
 def save_bm25_index(document_id: uuid.UUID, bm25_index: BM25Index) -> None:
     """
-    Persist a document's BM25 index to Redis with a 7-day TTL.
+    Persist a document's BM25 index to Redis.
 
     Non-fatal on RedisError — keyword search falls back to rebuilding from the DB.
     A warning is logged so the gap is visible in monitoring.
 
-    Redis key: documind:bm25:v1:{document_id}
-    TTL: 604800 seconds (7 days)
+    Redis key: BM25_CACHE_KEY_PREFIX:{document_id}
+    TTL: BM25_INDEX_TTL_SECONDS (7 days)
     """
-    redis_key = f"documind:bm25:v1:{document_id}"
+    redis_key = f"{BM25_CACHE_KEY_PREFIX}:{document_id}"
     try:
         r = get_redis_client()
-        r.setex(redis_key, 604800, bm25_index.serialize())
+        r.setex(redis_key, BM25_INDEX_TTL_SECONDS, bm25_index.serialize())
         logger.info(
             "BM25 index saved to Redis",
             extra={"document_id": str(document_id)},
