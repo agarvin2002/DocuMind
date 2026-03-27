@@ -84,6 +84,7 @@ def _get_pipeline():
                     keyword_search_fn=keyword_search_chunks,
                     reranker=_get_reranker(),
                     candidate_multiplier=settings.RETRIEVAL_CANDIDATE_MULTIPLIER,
+                    search_timeout_seconds=settings.RETRIEVAL_SEARCH_TIMEOUT_SECONDS,
                 )
     return _pipeline
 
@@ -275,12 +276,18 @@ def _truncate_at_sentence(text: str, max_chars: int) -> str:
     return text[:boundary] if boundary > 0 else text[:max_chars]
 
 
-def _resolve_citations(answer_text: str, chunks: list[ChunkSearchResult]) -> list:
+def _resolve_citations(
+    answer_text: str, chunks: list[ChunkSearchResult]
+) -> tuple[list, str]:
     """
     Extract [1], [2] markers from the answer and map them to chunk metadata.
 
+    Also strips any unresolvable markers (e.g. [99] when only 5 chunks exist)
+    from the answer text so the client never receives a dangling reference.
+
     Runs after the stream completes — no latency impact on token delivery.
-    Returns an empty list if no markers are found (graceful degradation).
+    Returns (citations, cleaned_answer). citations is empty when no valid
+    markers are found (graceful degradation).
     """
     from generation.constants import CITATION_QUOTE_MAX_CHARS
     from generation.schemas import Citation
@@ -304,7 +311,17 @@ def _resolve_citations(answer_text: str, chunks: list[ChunkSearchResult]) -> lis
             )
         )
 
-    return citations
+    # Strip markers that could not be resolved so the client text is clean.
+    # A marker is valid only if its index falls within the retrieved chunks.
+    valid_indices: set[int] = {int(m) - 1 for m in markers if 0 <= int(m) - 1 < len(chunks)}
+
+    def _replace_marker(match: re.Match) -> str:
+        idx = int(match.group(1)) - 1
+        return match.group(0) if idx in valid_indices else ""
+
+    cleaned_answer = re.sub(r"\[(\d+)\]", _replace_marker, answer_text)
+
+    return citations, cleaned_answer
 
 
 # ---------------------------------------------------------------------------
@@ -416,7 +433,7 @@ def execute_ask(
             accumulated += token
             yield build_sse_token_event(token)
 
-        citations = _resolve_citations(accumulated, chunks)
+        citations, clean_answer = _resolve_citations(accumulated, chunks)
 
         if not citations and re.search(r"\[\d+\]", accumulated):
             logger.warning(
@@ -428,11 +445,13 @@ def execute_ask(
         yield build_sse_done_event()
 
         # Store successful answer in semantic cache for future identical/similar queries.
+        # Use the cleaned answer (orphaned markers stripped) so cached responses
+        # are consistent with live responses served after the fix was deployed.
         cache.store(
             query,
             document_id,
             {
-                "answer": accumulated,
+                "answer": clean_answer,
                 "citations": [c.model_dump() for c in citations],
             },
         )
