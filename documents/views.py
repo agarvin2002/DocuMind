@@ -5,6 +5,7 @@ documents/views.py — API views for document upload and status retrieval.
 import logging
 import os
 
+from django.db import transaction
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.request import Request
@@ -42,8 +43,13 @@ class DocumentUploadView(APIView):
                 title=validated["title"],
                 original_filename=original_filename,
                 file_type=file_type,
+                api_key=request.auth,
             )
-            trigger_ingestion(doc.id)
+            # Queue the Celery task only after the DB transaction commits.
+            # Without on_commit, a Redis crash between the INSERT and the
+            # apply_async call leaves the document permanently stuck in PENDING
+            # with no worker ever processing it.
+            transaction.on_commit(lambda: trigger_ingestion(doc.id))
         except DocumentUploadError as e:
             return Response({"detail": str(e)}, status=e.http_status_code)
 
@@ -59,7 +65,7 @@ class DocumentDetailView(APIView):
 
     def get(self, request: Request, document_id) -> Response:
         try:
-            doc = get_document_by_id(document_id)
+            doc = get_document_by_id(document_id, api_key=request.auth)
         except DocumentNotFoundError as e:
             return Response({"detail": str(e)}, status=e.http_status_code)
 
