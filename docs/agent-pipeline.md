@@ -151,6 +151,8 @@ Returns a Pydantic model with a `sub_questions` list (up to `AGENT_SUB_QUESTION_
 
 Both results are cached in Redis. Repeated identical questions (same text, same document scope) skip the LLM classification call entirely.
 
+**On failure:** Both `classify()` and `decompose()` raise `PlanningError` if the LLM call fails (timeout, network error, Pydantic validation error). `classify_query_node` and `plan_query_node` in `graph.py` each catch `PlanningError`, set `state["error"]`, and return normally — the graph then routes to `error_node`, and the `AnalysisJob` ends with `status=failed`. This follows the [Error Handling Contract](#error-handling-contract): nodes never raise to the graph engine.
+
 ## Dependency Injection
 
 `build_agent_graph(planner, retrieval_tool, gen_tool)` uses `functools.partial` to bind all dependencies into each node function:

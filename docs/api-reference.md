@@ -258,7 +258,7 @@ Stream a grounded LLM answer as Server-Sent Events (SSE).
 | `query` | String | Yes | 1–1000 chars |
 | `document_id` | UUID | Yes | Must exist with `status=ready` |
 | `k` | Integer | No | 1–20, default 5 |
-| `model` | String | No | Model identifier — omit to use the auto-fallback chain |
+| `model` | String | No | Model identifier — omit to use the fallback chain (OpenAI → Anthropic → Bedrock → Ollama; see [Generation docs](generation.md#fallback-chain)) |
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/query/ask/ \
@@ -393,7 +393,9 @@ curl -X POST http://localhost:8000/api/v1/analysis/ \
 | `comparison` | Comparing content across two or more documents | "How do Contract A and Contract B differ on liability?" |
 | `contradiction` | Finding conflicts within or between documents | "Are there any contradictions between these two policy versions?" |
 
-Note: the LLM classifier may override your `workflow_type`. If it determines a `multi_hop` request is actually simple, it will fast-path it to `simple`. The `result_data.workflow_type` field shows what actually ran.
+**Note:** The LLM classifier always determines the final `workflow_type`, regardless of what you specified. It may downgrade a `multi_hop` request to `simple` (fast-path) **or** upgrade a `simple` request if the question is more complex than it appears. The `result_data.workflow_type` in the completed job shows what actually ran. Bypassing classification is not currently supported. See the [Agent Pipeline docs](agent-pipeline.md#query-planner) for how the classifier works.
+
+The [four workflow types](agent-pipeline.md#the-four-workflow-types) are described in the agent pipeline docs.
 
 **Response: `202 Accepted`**
 ```json
@@ -515,6 +517,8 @@ curl -H "X-API-Key: dm_xxxx" \
 
 Check service health. No authentication required. Used for load balancer readiness probes.
 
+**What is checked:** PostgreSQL (`SELECT 1`) and Redis (`PING`). **What is not checked:** MinIO and Ollama. A `healthy` response does not guarantee file uploads or LLM calls will succeed — those services fail with their own specific errors at request time.
+
 ```bash
 curl http://localhost:8000/api/v1/health/
 ```
@@ -543,4 +547,3 @@ curl http://localhost:8000/api/v1/health/
 }
 ```
 
-Checks: PostgreSQL (`SELECT 1`), Redis (`PING`). MinIO and Ollama are not checked — file uploads and LLM calls fail with specific errors at request time rather than blocking health.

@@ -105,6 +105,9 @@ cp .env.example .env
 # 2. Start all infrastructure services
 docker compose up -d
 
+# Wait until postgres and redis show "healthy" before proceeding (typically 5–15 seconds)
+docker compose ps
+
 # 3. One-time setup (first run only)
 docker compose exec minio mc alias set local http://localhost:9000 documind documind123
 docker compose exec minio mc mb local/documind-documents
@@ -121,6 +124,7 @@ Create an API key, then try the streaming ask endpoint:
 ```bash
 uv run python manage.py create_api_key dev-key
 # → dm_xxxx... (save this — shown once only)
+# For recommended .env settings (LOG_LEVEL, LOG_FORMAT, etc.) see docs/development.md
 
 # Upload a document
 curl -X POST http://localhost:8000/api/v1/documents/ \

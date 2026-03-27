@@ -125,7 +125,9 @@ class FallbackLLMClient:
         raise AnswerGenerationError("All providers failed")
 ```
 
-The providers list is built at the composition root (`query/services.py`) from whichever providers are configured in `.env`. The configured order: OpenAI → Anthropic → Bedrock → Ollama.
+The providers list is built at the [composition root](architecture.md#module-boundaries) (`query/services.py`) from whichever providers are configured in `.env`. The configured order: OpenAI → Anthropic → Bedrock → Ollama.
+
+**If all providers fail:** `FallbackLLMClient.stream()` raises the last `AnswerGenerationError` it received. In the `/ask/` endpoint this is emitted as an `event: error` SSE event (since headers are already sent — see [SSE Wire Protocol](#sse-wire-protocol)). In the agent pipeline, the calling node catches the error and sets `state["error"]`, routing to `error_node`. Additionally, each provider has a **60-second circuit breaker cooldown** — a provider that fails is skipped on subsequent calls within that window to avoid paying its full timeout penalty on every request.
 
 **Zero-change extensibility:** Adding a new provider requires:
 1. Implement a class with `stream(system_prompt, user_message, *, temperature, max_tokens, timeout) -> Iterator[str]`
@@ -160,7 +162,7 @@ The streaming path uses `FallbackLLMClient.stream()` → raw tokens. The agent p
 - `QueryPlanner.classify()` → returns `ComplexityClassification` (workflow_type, complexity, reasoning)
 - `QueryPlanner.decompose()` → returns `QueryDecomposition` (sub_questions list, reasoning)
 
-**`max_retries=0`:** Instructor has a built-in retry mechanism that re-calls the LLM if validation fails. With a local Ollama model that takes 60-200s per call, even one retry doubles latency. `max_retries=0` is set explicitly to disable this.
+**`max_retries=0`:** Instructor has a built-in retry mechanism that re-calls the LLM if validation fails. With a local Ollama model that takes 60–200s per call, even one retry doubles latency. `max_retries=0` is set via `AGENT_STRUCTURED_LLM_MAX_RETRIES = 0` in `agents/constants.py` to disable this. If Pydantic validation fails, the error surfaces as a `PlanningError`, which the calling node catches and routes to `error_node`.
 
 ## Prompt Architecture
 
