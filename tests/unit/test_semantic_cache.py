@@ -190,6 +190,7 @@ def test_execute_ask_cache_miss_stores_result():
         mock_settings.DOCUMIND_LLM_TEMPERATURE = 0.0
         mock_settings.DOCUMIND_LLM_MAX_TOKENS = 2048
         mock_settings.DOCUMIND_LLM_TIMEOUT_SECONDS = 30
+        mock_settings.DOCUMIND_PROMPT_VERSION = "v1"
         mock_pipeline_factory.return_value.run.return_value = [dummy_chunk]
 
         from query.services import execute_ask

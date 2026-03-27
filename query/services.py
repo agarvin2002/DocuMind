@@ -55,9 +55,13 @@ def _get_reranker():
     if _reranker is None:
         with _reranker_lock:
             if _reranker is None:
+                from django.conf import settings
+
                 from retrieval.reranker import CrossEncoderReranker
 
-                _reranker = CrossEncoderReranker()
+                _reranker = CrossEncoderReranker(
+                    model_name=settings.RERANKER_MODEL_NAME,
+                )
     return _reranker
 
 
@@ -66,6 +70,8 @@ def _get_pipeline():
     if _pipeline is None:
         with _pipeline_lock:
             if _pipeline is None:
+                from django.conf import settings
+
                 from documents.selectors import (
                     keyword_search_chunks,
                     vector_search_chunks,
@@ -77,6 +83,7 @@ def _get_pipeline():
                     vector_search_fn=vector_search_chunks,
                     keyword_search_fn=keyword_search_chunks,
                     reranker=_get_reranker(),
+                    candidate_multiplier=settings.RETRIEVAL_CANDIDATE_MULTIPLIER,
                 )
     return _pipeline
 
@@ -250,6 +257,24 @@ def _resolve_provider(model: str | None):
     return registry[model]
 
 
+def _truncate_at_sentence(text: str, max_chars: int) -> str:
+    """
+    Truncate text at the last sentence boundary (.  !  ?) before max_chars.
+
+    Avoids mid-sentence cuts like "The plaintiff argued that the con" which
+    erode trust in citation quotes. Falls back to the last word boundary if
+    no sentence terminator is found within the window.
+    """
+    if len(text) <= max_chars:
+        return text
+    # Walk sentence-ending punctuation in reverse to find the last clean cut.
+    for match in reversed(list(re.finditer(r"[.!?]", text[:max_chars]))):
+        return text[: match.start() + 1]
+    # No sentence boundary found — fall back to last word boundary.
+    boundary = text[:max_chars].rfind(" ")
+    return text[:boundary] if boundary > 0 else text[:max_chars]
+
+
 def _resolve_citations(answer_text: str, chunks: list[ChunkSearchResult]) -> list:
     """
     Extract [1], [2] markers from the answer and map them to chunk metadata.
@@ -257,6 +282,7 @@ def _resolve_citations(answer_text: str, chunks: list[ChunkSearchResult]) -> lis
     Runs after the stream completes — no latency impact on token delivery.
     Returns an empty list if no markers are found (graceful degradation).
     """
+    from generation.constants import CITATION_QUOTE_MAX_CHARS
     from generation.schemas import Citation
 
     markers = re.findall(r"\[(\d+)\]", answer_text)
@@ -269,14 +295,12 @@ def _resolve_citations(answer_text: str, chunks: list[ChunkSearchResult]) -> lis
             continue
         seen.add(idx)
         chunk = chunks[idx]
-        from generation.constants import CITATION_QUOTE_MAX_CHARS
-
         citations.append(
             Citation(
                 chunk_id=str(chunk.chunk_id),
                 document_title=chunk.document_title,
                 page_number=chunk.page_number,
-                quote=chunk.parent_text[:CITATION_QUOTE_MAX_CHARS],
+                quote=_truncate_at_sentence(chunk.parent_text, CITATION_QUOTE_MAX_CHARS),
             )
         )
 
@@ -354,7 +378,7 @@ def execute_ask(
             f"No relevant chunks found for query in document {document_id}"
         )
 
-    system_prompt = get_system_prompt()
+    system_prompt = get_system_prompt(version=settings.DOCUMIND_PROMPT_VERSION)
     user_message = build_user_message(
         query,
         chunks,

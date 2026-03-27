@@ -14,6 +14,7 @@ from pgvector.django import CosineDistance
 from core.redis import get_redis_client
 from documents.exceptions import DocumentNotFoundError
 from documents.models import Document, DocumentChunk
+from documents.services import _BM25_CACHE_KEY_PREFIX
 from retrieval.bm25 import BM25Index
 from retrieval.schemas import ChunkSearchResult
 
@@ -157,7 +158,7 @@ def _get_bm25_index_or_rebuild(document_id: uuid.UUID) -> BM25Index:
     Redis failures are non-fatal — the index is rebuilt from the database and
     the search continues. A warning is logged so the gap is visible in monitoring.
     """
-    redis_key = f"documind:bm25:v1:{document_id}"
+    redis_key = f"{_BM25_CACHE_KEY_PREFIX}:{document_id}"
     cached = None
 
     try:

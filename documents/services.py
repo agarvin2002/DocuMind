@@ -161,6 +161,12 @@ def save_document_chunks(
     )
 
 
+# Bump this prefix to "documind:bm25:v2:..." if BM25 tokenization logic changes
+# (e.g. stemming or stopword removal is added). Old keys will be ignored and
+# rebuilt on first query rather than returning stale indexes.
+_BM25_CACHE_KEY_PREFIX = "documind:bm25:v1"
+
+
 def save_bm25_index(document_id: uuid.UUID, bm25_index: BM25Index) -> None:
     """
     Persist a document's BM25 index to Redis with a 7-day TTL.
@@ -171,7 +177,7 @@ def save_bm25_index(document_id: uuid.UUID, bm25_index: BM25Index) -> None:
     Redis key: documind:bm25:v1:{document_id}
     TTL: 604800 seconds (7 days)
     """
-    redis_key = f"documind:bm25:v1:{document_id}"
+    redis_key = f"{_BM25_CACHE_KEY_PREFIX}:{document_id}"
     try:
         r = get_redis_client()
         r.setex(redis_key, 604800, bm25_index.serialize())
