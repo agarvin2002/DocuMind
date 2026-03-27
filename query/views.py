@@ -14,6 +14,7 @@ All business logic lives in query/services.py.
 import logging
 
 from django.http import StreamingHttpResponse
+from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -95,6 +96,13 @@ class AskView(APIView):
     """
 
     throttle_classes = [QueryAskThrottle]
+
+    def perform_content_negotiation(self, request, force=False):
+        # Clients send Accept: text/event-stream for SSE but DRF only knows about
+        # JSON renderers and raises NotAcceptable before the view method runs.
+        # Override to always accept — the actual Content-Type is set on the
+        # StreamingHttpResponse below. Error responses use JSONRenderer directly.
+        return (JSONRenderer(), "application/json")
 
     def post(self, request: Request) -> StreamingHttpResponse | Response:
         # Step 1: validate the request body.

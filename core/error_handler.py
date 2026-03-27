@@ -24,6 +24,7 @@ from rest_framework import status
 from rest_framework.exceptions import (
     AuthenticationFailed,
     MethodNotAllowed,
+    NotAcceptable,
     NotAuthenticated,
     NotFound,
     ParseError,
@@ -129,6 +130,17 @@ def documind_exception_handler(exc: Exception, context: dict) -> Response | None
                 "request_id": request_id,
             },
             status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # --- DRF 406 ---
+    if isinstance(exc, NotAcceptable):
+        return Response(
+            {
+                "error": "The requested content type is not supported.",
+                "code": "NOT_ACCEPTABLE",
+                "request_id": request_id,
+            },
+            status=status.HTTP_406_NOT_ACCEPTABLE,
         )
 
     # --- DRF 405 ---
