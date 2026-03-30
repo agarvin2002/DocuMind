@@ -51,7 +51,7 @@ dev = [
     "fpdf2>=2.7",
     # Pin to last unaffected release — CVE-2026-4539 affects all 2.19.x.
     # Remove upper bound once a patched release is available.
-    "pygments>=2.18.0,<2.19.0",
+    "pygments>=2.18.0,<2.21.0",
 ]
 
 # ---------------------------------------------------------------------------
