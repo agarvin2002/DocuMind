@@ -5,10 +5,11 @@
 | Tool | Version | Install |
 |------|---------|---------|
 | Python | 3.12 | `brew install python@3.12` (macOS) or [python.org](https://python.org) |
+| Node.js | 18+ | `brew install node` (macOS) or [nodejs.org](https://nodejs.org) |
 | Docker Desktop | Latest | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) |
 | uv | Latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 
-Nothing else. `uv` manages the virtualenv and all Python dependencies — no `pip`, no `poetry`, no `virtualenv` commands needed.
+`uv` manages the virtualenv and all Python dependencies — no `pip`, no `poetry`, no `virtualenv` commands needed. Node.js is only required to run the frontend.
 
 ---
 
@@ -134,14 +135,51 @@ uv run python manage.py migrate
 
 ---
 
+## Frontend Setup
+
+Install Node dependencies once:
+
+```bash
+cd frontend
+npm install
+```
+
+Run the Vite dev server:
+
+```bash
+cd frontend
+npm run dev
+# → http://localhost:5173
+```
+
+Vite proxies all `/api` requests to `http://localhost:8000`, so Django must be running. No CORS configuration changes are needed in Django.
+
+Build for production:
+
+```bash
+cd frontend
+npm run build   # outputs to frontend/dist/
+```
+
+Run the Playwright smoke tests (requires the Vite dev server to be running, or it starts one automatically):
+
+```bash
+cd frontend
+npx playwright test
+```
+
+See [docs/testing.md](testing.md) for details on the smoke test suite.
+
+---
+
 ## Running the Application
 
-The application needs three processes. Open three terminal windows:
+The full application needs three processes. Open three terminal windows:
 
 **Terminal 1 — Django web server:**
 ```bash
 uv run python manage.py runserver
-# → http://localhost:8000
+# → http://localhost:8000  (API + admin)
 ```
 
 **Terminal 2 — Celery worker** (ingestion + analysis tasks):
@@ -149,8 +187,13 @@ uv run python manage.py runserver
 uv run celery -A core worker --loglevel=info
 ```
 
-**Terminal 3 — (optional) watch logs:**
-The Flower dashboard at [localhost:5555](http://localhost:5555) shows all Celery task state. No third terminal needed unless you want live Celery logs in your terminal too.
+**Terminal 3 — React frontend:**
+```bash
+cd frontend && npm run dev
+# → http://localhost:5173  (UI)
+```
+
+The Flower dashboard at [localhost:5555](http://localhost:5555) shows all Celery task state — no additional terminal needed for monitoring.
 
 ---
 
@@ -303,6 +346,20 @@ python3 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 ```
 DocuMind/
+├── frontend/                # React SPA (Vite + TypeScript + Tailwind)
+│   ├── src/
+│   │   ├── api/             # Fetch wrappers for all backend endpoints
+│   │   ├── components/      # Layout, Documents, Chat, Analysis, Search, UI primitives
+│   │   ├── hooks/           # useStreamingAsk, useDocumentPolling, useAnalysisPolling
+│   │   ├── pages/           # DocumentsPage, ChatPage, AnalysisPage, SearchPage
+│   │   ├── stores/          # Zustand stores: apiKey, documents, chat, toasts
+│   │   └── types/           # Shared TypeScript interfaces
+│   ├── e2e/                 # Playwright smoke tests
+│   ├── package.json
+│   ├── vite.config.ts       # Dev server + /api → localhost:8000 proxy
+│   ├── tailwind.config.ts   # Custom design tokens (Obsidian dark theme)
+│   └── playwright.config.ts
+│
 ├── core/                    # Django settings, middleware, error handling
 │   ├── settings.py          # All settings — reads from .env
 │   ├── middleware.py        # RequestID middleware — injects request_id into all logs

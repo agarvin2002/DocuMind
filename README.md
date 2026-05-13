@@ -82,6 +82,8 @@ GET /api/v1/analysis/{job_id}/  → Redis cache → PostgreSQL fallback
 
 ## Tech Stack
 
+### Backend
+
 | Component | Technology | Why |
 |-----------|-----------|-----|
 | API | Django 4.2 + DRF | Batteries-included, production patterns, OpenAPI via drf-spectacular |
@@ -95,6 +97,19 @@ GET /api/v1/analysis/{job_id}/  → Redis cache → PostgreSQL fallback
 | LLM providers | OpenAI, Anthropic, Bedrock, Ollama | Chain of Responsibility, no vendor lock-in, local dev with zero API cost |
 | Observability | LangSmith + python-json-logger | LLM span tracing, request-ID propagation, JSON in prod |
 | Evaluation | RAGAS + GitHub Actions | Automated weekly regression against BM25-only baseline |
+
+### Frontend
+
+| Component | Technology | Why |
+|-----------|-----------|-----|
+| Framework | React 18 + Vite 5 + TypeScript | Fast HMR, strict types, industry standard |
+| Styling | Tailwind CSS 3 | Utility-first, dark "Obsidian" design token system |
+| Components | Radix UI primitives | Accessible headless components — Dialog, Accordion, Slider, Checkbox |
+| Data fetching | TanStack Query v5 | Polling, cache management, refetchInterval for status updates |
+| Routing | React Router v6 | SPA routing with nested layouts |
+| State | Zustand + localStorage | Document list + API key + chat history, persist across page reloads |
+| Streaming | Native fetch + ReadableStream | SSE from POST /query/ask/ — EventSource only supports GET |
+| E2E tests | Playwright | Smoke suite covering all 4 pages and key user flows |
 
 ## Quick Start
 
@@ -114,10 +129,16 @@ docker compose exec minio mc mb local/documind-documents
 docker compose exec ollama ollama pull qwen2.5:3b
 uv run python manage.py migrate
 
-# 4. Start the application (two terminals)
-uv run python manage.py runserver          # Terminal 1 — Django
-uv run celery -A core worker --loglevel=info  # Terminal 2 — Celery
+# 4. Install frontend dependencies (first run only)
+cd frontend && npm install && cd ..
+
+# 5. Start the application (three terminals)
+uv run python manage.py runserver             # Terminal 1 — Django API
+uv run celery -A core worker --loglevel=info  # Terminal 2 — Celery worker
+cd frontend && npm run dev                    # Terminal 3 — React frontend
 ```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser. Click **Settings** in the sidebar to enter your API key.
 
 Create an API key, then try the streaming ask endpoint:
 
@@ -165,8 +186,9 @@ Interactive Swagger UI (when running locally): `http://localhost:8000/api/docs/`
 | [Semantic Cache](docs/semantic-cache.md) | pgvector HNSW cache, similarity threshold math, invalidation contract |
 | [Agent Pipeline](docs/agent-pipeline.md) | LangGraph state machine, 4 workflow types, error contract, async execution model |
 | [API Reference](docs/api-reference.md) | All endpoints with request/response examples and curl commands |
+| [Frontend](docs/frontend.md) | React SPA architecture, pages, design tokens, SSE streaming implementation |
 | [Development Setup](docs/development.md) | Local setup, environment variables, smoke test walkthrough |
-| [Testing Guide](docs/testing.md) | Running tests, protocol fakes philosophy, RAGAS evaluations |
+| [Testing Guide](docs/testing.md) | Running tests, protocol fakes philosophy, RAGAS evaluations, Playwright E2E |
 
 ## License
 

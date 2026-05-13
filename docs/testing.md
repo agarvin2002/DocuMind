@@ -272,6 +272,75 @@ The evaluator:
 
 ---
 
+## End-to-End Tests (Playwright)
+
+Playwright smoke tests live in `frontend/e2e/smoke.spec.ts` and cover the full browser-rendered UI.
+
+### Running
+
+```bash
+cd frontend
+
+# Run all 12 smoke tests (starts Vite dev server automatically if not already running)
+npx playwright test
+
+# Run with visible browser (useful for debugging)
+npx playwright test --headed
+
+# Run a specific test
+npx playwright test -g "upload a PDF"
+
+# Show last test report
+npx playwright show-report
+```
+
+The `playwright.config.ts` sets `reuseExistingServer: true` — if you already have `npm run dev` running, Playwright reuses it; otherwise it starts one automatically.
+
+### What the 12 tests cover
+
+| # | Test | What it verifies |
+|---|------|-----------------|
+| 1 | App shell | Sidebar renders, all 4 nav links present, no API key banner when key is seeded |
+| 2 | API key banner | "No API key set" banner appears when no key is in localStorage |
+| 3 | Settings modal | Opens, shows API key input, Test Connection responds, Save closes dialog |
+| 4 | Documents empty state | "No documents yet" and "Drop a PDF here" shown when store is empty |
+| 5 | PDF upload | File input triggers upload, document card appears, status badge shows Pending/Processing/Ready/Failed |
+| 6 | Chat navigation | `/chat` shows "Chat with:" selector or "No documents ready" empty state |
+| 7 | Analysis navigation | `/analysis` shows "Deep Analysis", "New Analysis", "Job History" headings |
+| 8 | Search navigation | `/search` shows "Search Explorer", "Query", and "Results (k)" labels |
+| 9 | Chat with document | Seeding a ready doc into localStorage and navigating to `/chat/{id}` renders textarea + disabled Send button |
+| 10 | Analysis workflow selector | All 4 workflow buttons visible, clicking one selects it, Run Analysis disabled with no input |
+| 11 | Search k slider | Default value of 10 shown, Search button disabled with no input |
+| 12 | 404 redirect | Unknown routes redirect to Documents page |
+
+### How the tests work
+
+**API key injection** — each test calls `seedApiKey(page)` which uses Playwright's `addInitScript` to write the API key into `localStorage` before the page loads. This suppresses the "No API key set" banner without going through the Settings modal UI.
+
+**Fake document injection** — test 9 (chat with document) seeds a fake ready document directly into `localStorage` using `addInitScript`, avoiding the need for a real upload or running Celery.
+
+**Minimal PDF** — test 5 (upload) generates a hand-crafted minimal valid PDF in `/tmp` using Node's `fs` module and submits it via the hidden `<input type="file">`. No real Celery worker is required — the test only verifies the UI response up to the status badge appearance.
+
+### Prerequisites for the upload test
+
+Test 5 hits the real `POST /api/v1/documents/` endpoint. The backend must be running:
+
+```bash
+# In separate terminals before running Playwright
+uv run python manage.py runserver
+uv run celery -A core worker --loglevel=info
+```
+
+The API key baked into `smoke.spec.ts` (`dm_Jg12cRsr8oysHllJVHSXO3BrEsHf5YP4lgOmDtw98qo`) was created with:
+
+```bash
+uv run python manage.py create_api_key --name smoke-test-key
+```
+
+If that key has been deleted, create a new one and update line 7 of `frontend/e2e/smoke.spec.ts`.
+
+---
+
 ## CI Pipeline
 
 Every push to `main` and every pull request triggers two jobs:
