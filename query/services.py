@@ -179,6 +179,7 @@ def _get_provider_registry() -> dict:
                     AnthropicProvider,
                     BedrockProvider,
                     FallbackLLMClient,  # noqa: F401 — imported here to warm the module
+                    GeminiProvider,
                     OllamaProvider,
                     OpenAIProvider,
                 )
@@ -211,10 +212,16 @@ def _get_provider_registry() -> dict:
                         model=settings.OLLAMA_MODEL,
                     )
 
+                if settings.GEMINI_API_KEY:
+                    registry[settings.GEMINI_MODEL] = GeminiProvider(
+                        api_key=settings.GEMINI_API_KEY,
+                        model=settings.GEMINI_MODEL,
+                    )
+
                 if not registry:
                     raise ImproperlyConfigured(
                         "No LLM provider configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, "
-                        "BEDROCK_ENABLED=true, or OLLAMA_ENABLED=true in your .env file."
+                        "GEMINI_API_KEY, BEDROCK_ENABLED=true, or OLLAMA_ENABLED=true in your .env file."
                     )
 
                 _provider_registry = registry

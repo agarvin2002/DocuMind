@@ -425,6 +425,96 @@ class OllamaProvider:
 
 
 # ---------------------------------------------------------------------------
+# Gemini provider
+# ---------------------------------------------------------------------------
+
+
+class GeminiProvider:
+    """
+    Wraps Google Gemini via the google-genai SDK.
+    stream() yields raw tokens for the /ask/ SSE endpoint.
+    """
+
+    def __init__(self, api_key: str, model: str) -> None:
+        self._api_key = api_key
+        self._model = model
+        self._client = None
+
+    def _get_client(self):
+        if self._client is None:
+            from google import genai
+
+            self._client = genai.Client(api_key=self._api_key)
+        return self._client
+
+    @traceable(name="gemini_stream", run_type="llm")
+    def stream(
+        self,
+        system_prompt: str,
+        user_message: str,
+        *,
+        temperature: float,
+        max_tokens: int,
+        timeout: float,
+    ) -> Iterator[str]:
+        from google.genai import types
+        from google.genai.errors import APIError
+
+        start = time.monotonic()
+        first_token_time: float | None = None
+        tokens_yielded = 0
+        success = False
+        try:
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=temperature,
+                max_output_tokens=max_tokens,
+                http_options=types.HttpOptions(timeout=int(timeout * 1000)),
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+            )
+            response = self._get_client().models.generate_content_stream(
+                model=self._model,
+                contents=user_message,
+                config=config,
+            )
+            for chunk in response:
+                if chunk.text:
+                    if first_token_time is None:
+                        first_token_time = time.monotonic()
+                    tokens_yielded += 1
+                    yield chunk.text
+            success = True
+        except APIError as exc:
+            if exc.code == 429:
+                raise AnswerGenerationError(
+                    f"Gemini rate limit exceeded: {exc}"
+                ) from exc
+            if exc.code in (401, 403):
+                raise AnswerGenerationError(
+                    f"Gemini API key invalid or permission denied: {exc}"
+                ) from exc
+            if exc.code == 400:
+                raise AnswerGenerationError(f"Gemini bad request: {exc}") from exc
+            raise AnswerGenerationError(f"Gemini API error ({exc.code}): {exc}") from exc
+        except Exception as exc:
+            raise AnswerGenerationError(f"Gemini error: {exc}") from exc
+        finally:
+            total_ms = (time.monotonic() - start) * 1000
+            ttft_ms = (first_token_time - start) * 1000 if first_token_time else None
+            logger.info(
+                "llm_stream_complete",
+                extra={
+                    "provider": "Gemini",
+                    "model": self._model,
+                    "ttft_ms": round(ttft_ms, 1) if ttft_ms is not None else None,
+                    "tokens_yielded": tokens_yielded,
+                    "total_ms": round(total_ms, 1),
+                    "success": success,
+                },
+            )
+
+
+# ---------------------------------------------------------------------------
 # Fallback client — Chain of Responsibility
 # ---------------------------------------------------------------------------
 

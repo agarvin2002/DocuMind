@@ -46,6 +46,7 @@ dependencies = [
     "langchain-openai>=1.1.14",
     "pillow>=12.2.0",
     "pytest>=9.0.3",
+    "google-genai>=2.2.0",
 ]
 
 [dependency-groups]

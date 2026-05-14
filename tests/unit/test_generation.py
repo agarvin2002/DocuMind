@@ -342,6 +342,101 @@ class TestOllamaProvider:
 
 
 # ---------------------------------------------------------------------------
+# TestGeminiProvider
+# ---------------------------------------------------------------------------
+
+
+class TestGeminiProvider:
+    def test_yields_tokens_from_streaming_response(self):
+        from generation.llm import GeminiProvider
+
+        provider = GeminiProvider(api_key="fake-key", model="gemini-2.0-flash")
+
+        mock_chunk_1 = MagicMock()
+        mock_chunk_1.text = "Hello"
+        mock_chunk_2 = MagicMock()
+        mock_chunk_2.text = " world"
+
+        with patch.object(provider, "_get_client") as mock_client:
+            mock_client.return_value.models.generate_content_stream.return_value = iter(
+                [mock_chunk_1, mock_chunk_2]
+            )
+            tokens = list(
+                provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+            )
+
+        assert tokens == ["Hello", " world"]
+
+    def test_skips_chunks_with_no_text(self):
+        from generation.llm import GeminiProvider
+
+        provider = GeminiProvider(api_key="fake-key", model="gemini-2.0-flash")
+
+        chunk_with_text = MagicMock()
+        chunk_with_text.text = "answer"
+        chunk_empty = MagicMock()
+        chunk_empty.text = None
+
+        with patch.object(provider, "_get_client") as mock_client:
+            mock_client.return_value.models.generate_content_stream.return_value = iter(
+                [chunk_empty, chunk_with_text]
+            )
+            tokens = list(
+                provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+            )
+
+        assert tokens == ["answer"]
+
+    def test_rate_limit_error_raises_answer_generation_error(self):
+        from google.genai.errors import ClientError
+
+        from generation.llm import GeminiProvider
+
+        provider = GeminiProvider(api_key="fake-key", model="gemini-2.0-flash")
+
+        err = ClientError(429, {"error": {"code": 429, "message": "quota exceeded", "status": "RESOURCE_EXHAUSTED"}})
+
+        with patch.object(provider, "_get_client") as mock_client:
+            mock_client.return_value.models.generate_content_stream.side_effect = err
+            with pytest.raises(AnswerGenerationError, match="rate limit"):
+                list(
+                    provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                )
+
+    def test_permission_denied_raises_answer_generation_error(self):
+        from google.genai.errors import ClientError
+
+        from generation.llm import GeminiProvider
+
+        provider = GeminiProvider(api_key="bad-key", model="gemini-2.0-flash")
+
+        err = ClientError(403, {"error": {"code": 403, "message": "permission denied", "status": "PERMISSION_DENIED"}})
+
+        with patch.object(provider, "_get_client") as mock_client:
+            mock_client.return_value.models.generate_content_stream.side_effect = err
+            with pytest.raises(AnswerGenerationError, match="permission denied"):
+                list(
+                    provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                )
+
+    def test_generic_api_error_raises_answer_generation_error(self):
+        from google.genai.errors import ServerError
+
+        from generation.llm import GeminiProvider
+
+        provider = GeminiProvider(api_key="fake-key", model="gemini-2.0-flash")
+
+        err = ServerError(500, {"error": {"code": 500, "message": "internal error", "status": "INTERNAL"}})
+
+        with patch.object(provider, "_get_client") as mock_client:
+            mock_client.return_value.models.generate_content_stream.side_effect = err
+            with pytest.raises(AnswerGenerationError):
+                list(
+                    provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                )
+
+
+# ---------------------------------------------------------------------------
 # TestExecuteAsk
 # ---------------------------------------------------------------------------
 
