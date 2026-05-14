@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import * as os from 'os'
 
 // API key created for smoke tests — passed via localStorage seed
-const API_KEY = 'dm_Jg12cRsr8oysHllJVHSXO3BrEsHf5YP4lgOmDtw98qo'
+const API_KEY = 'dm_6X7l3b3A_mVyu9CCa7ebFTk_l2Ob2AEvcpIHFwichtw'
 
 // Seed the API key into localStorage before each test so the banner is gone
 async function seedApiKey(page: Page) {
