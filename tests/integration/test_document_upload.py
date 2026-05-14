@@ -12,8 +12,13 @@ from rest_framework.test import APIClient
 
 
 @pytest.fixture
-def api_client():
-    return APIClient()
+def api_client(db):
+    from authentication.models import APIKey
+
+    _, raw_key = APIKey.create_with_key(name="test-runner")
+    client = APIClient()
+    client.credentials(HTTP_X_API_KEY=raw_key)
+    return client
 
 
 @pytest.fixture
