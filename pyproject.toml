@@ -35,7 +35,7 @@ dependencies = [
     "django-storages>=1.14",
     "python-json-logger>=4.0.0",
     # Explicit lower bound to pick up CVE-2026-25645 fix (transitive via huggingface-hub et al.)
-    "requests>=2.33.0",
+    "requests>=2.33.1",
     "ragas>=0.4.3",
     "datasets>=4.8.3",
     "nltk>=3.9.4",
