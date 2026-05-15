@@ -236,6 +236,10 @@ OLLAMA_ENABLED = env.bool("OLLAMA_ENABLED", default=False)
 OLLAMA_BASE_URL = env("OLLAMA_BASE_URL", default="http://localhost:11434/v1")
 OLLAMA_MODEL = env("OLLAMA_MODEL", default="llama3.2")
 
+# Google Gemini — set GEMINI_API_KEY to enable
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-2.5-flash")
+
 # Agent pipeline provider — selects which LLM the Phase 5 agent uses for
 # structured output (classify, decompose, generate). Valid values: "ollama", "openai".
 # Defaults to "ollama" when OLLAMA_ENABLED=true so local dev works without cloud keys.
