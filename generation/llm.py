@@ -495,7 +495,9 @@ class GeminiProvider:
                 ) from exc
             if exc.code == 400:
                 raise AnswerGenerationError(f"Gemini bad request: {exc}") from exc
-            raise AnswerGenerationError(f"Gemini API error ({exc.code}): {exc}") from exc
+            raise AnswerGenerationError(
+                f"Gemini API error ({exc.code}): {exc}"
+            ) from exc
         except Exception as exc:
             raise AnswerGenerationError(f"Gemini error: {exc}") from exc
         finally:

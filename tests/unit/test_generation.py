@@ -362,7 +362,9 @@ class TestGeminiProvider:
                 [mock_chunk_1, mock_chunk_2]
             )
             tokens = list(
-                provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                provider.stream(
+                    "sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0
+                )
             )
 
         assert tokens == ["Hello", " world"]
@@ -382,7 +384,9 @@ class TestGeminiProvider:
                 [chunk_empty, chunk_with_text]
             )
             tokens = list(
-                provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                provider.stream(
+                    "sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0
+                )
             )
 
         assert tokens == ["answer"]
@@ -394,13 +398,24 @@ class TestGeminiProvider:
 
         provider = GeminiProvider(api_key="fake-key", model="gemini-2.0-flash")
 
-        err = ClientError(429, {"error": {"code": 429, "message": "quota exceeded", "status": "RESOURCE_EXHAUSTED"}})
+        err = ClientError(
+            429,
+            {
+                "error": {
+                    "code": 429,
+                    "message": "quota exceeded",
+                    "status": "RESOURCE_EXHAUSTED",
+                }
+            },
+        )
 
         with patch.object(provider, "_get_client") as mock_client:
             mock_client.return_value.models.generate_content_stream.side_effect = err
             with pytest.raises(AnswerGenerationError, match="rate limit"):
                 list(
-                    provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                    provider.stream(
+                        "sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0
+                    )
                 )
 
     def test_permission_denied_raises_answer_generation_error(self):
@@ -410,13 +425,24 @@ class TestGeminiProvider:
 
         provider = GeminiProvider(api_key="bad-key", model="gemini-2.0-flash")
 
-        err = ClientError(403, {"error": {"code": 403, "message": "permission denied", "status": "PERMISSION_DENIED"}})
+        err = ClientError(
+            403,
+            {
+                "error": {
+                    "code": 403,
+                    "message": "permission denied",
+                    "status": "PERMISSION_DENIED",
+                }
+            },
+        )
 
         with patch.object(provider, "_get_client") as mock_client:
             mock_client.return_value.models.generate_content_stream.side_effect = err
             with pytest.raises(AnswerGenerationError, match="permission denied"):
                 list(
-                    provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                    provider.stream(
+                        "sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0
+                    )
                 )
 
     def test_generic_api_error_raises_answer_generation_error(self):
@@ -426,13 +452,18 @@ class TestGeminiProvider:
 
         provider = GeminiProvider(api_key="fake-key", model="gemini-2.0-flash")
 
-        err = ServerError(500, {"error": {"code": 500, "message": "internal error", "status": "INTERNAL"}})
+        err = ServerError(
+            500,
+            {"error": {"code": 500, "message": "internal error", "status": "INTERNAL"}},
+        )
 
         with patch.object(provider, "_get_client") as mock_client:
             mock_client.return_value.models.generate_content_stream.side_effect = err
             with pytest.raises(AnswerGenerationError):
                 list(
-                    provider.stream("sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0)
+                    provider.stream(
+                        "sys", "usr", temperature=0.1, max_tokens=100, timeout=10.0
+                    )
                 )
 
 
