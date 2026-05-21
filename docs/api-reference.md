@@ -279,6 +279,7 @@ curl -X POST http://localhost:8000/api/v1/query/ask/ \
 | OpenAI | `"gpt-4o"` |
 | Anthropic | `"claude-sonnet-4-6-20251001"` |
 | AWS Bedrock | `"anthropic.claude-3-sonnet-20240229-v1:0"` |
+| Google Gemini | `"gemini-2.5-flash"` |
 | Ollama | `"qwen2.5:3b"`, `"llama3.2"` |
 | Auto-fallback | omit field or send `null` |
 

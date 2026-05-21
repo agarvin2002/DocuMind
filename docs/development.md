@@ -290,10 +290,12 @@ Tradeoff: API costs, data leaves your machine, but much faster and better qualit
 # Set all providers — system tries OpenAI first, falls back on failure
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
+GEMINI_MODEL=gemini-2.5-flash
 OLLAMA_ENABLED=true
 AGENT_LLM_PROVIDER=openai
 ```
-The fallback chain order: OpenAI → Anthropic → Bedrock → Ollama. If OpenAI times out, Anthropic takes over — zero code changes needed.
+The fallback chain order: OpenAI → Anthropic → Bedrock → Gemini → Ollama. If OpenAI times out, Anthropic takes over — zero code changes needed.
 
 ---
 

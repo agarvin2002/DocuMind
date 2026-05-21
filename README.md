@@ -10,7 +10,7 @@ A production-grade RAG system with hybrid search, streaming generation, and a La
 
 - **Semantic cache:** pgvector HNSW index with cosine distance ≤ 0.08 (92% similarity threshold), 7-day TTL. Semantically equivalent questions ("What are the main risks?" and "What risks does this document describe?") hit cache even with different phrasing. Fail-open — any cache failure falls through silently to the LLM pipeline.
 
-- **LLM fallback chain:** OpenAI GPT-4o → Anthropic Claude → AWS Bedrock → Ollama, implemented as a Chain of Responsibility via `LLMProviderPort` structural Protocol. Adding a new provider requires zero changes to `FallbackLLMClient` — just append to the providers list at the composition root.
+- **LLM fallback chain:** OpenAI GPT-4o → Anthropic Claude → AWS Bedrock → Google Gemini → Ollama, implemented as a Chain of Responsibility via `LLMProviderPort` structural Protocol. Adding a new provider requires zero changes to `FallbackLLMClient` — just append to the providers list at the composition root.
 
 - **Agent pipeline:** LangGraph state machine classifies queries into four workflow types (`simple`, `multi_hop`, `comparison`, `contradiction`) and routes accordingly. Runs asynchronously via Celery with 202 Accepted + status polling. Nodes never raise to the graph engine — they set `state["error"]` and routing detects it, keeping every execution structurally complete.
 
@@ -52,7 +52,7 @@ POST /api/v1/query/ask/
       ├── HybridFusion.fuse()              → RRF k=60
       └── CrossEncoderReranker.rerank()    → ms-marco-MiniLM-L-6-v2
 
-  → FallbackLLMClient.stream()  [OpenAI → Anthropic → Bedrock → Ollama]
+  → FallbackLLMClient.stream()  [OpenAI → Anthropic → Bedrock → Gemini → Ollama]
       → SSE token events
       → _resolve_citations()   → [1][2] markers → chunk metadata
       → SSE citations event
@@ -94,7 +94,7 @@ GET /api/v1/analysis/{job_id}/  → Redis cache → PostgreSQL fallback
 | Agent framework | LangGraph + LangChain | Typed state machine, clean conditional routing, compiled graph |
 | Task queue | Celery + Redis | Async ingestion and agent jobs, Flower monitoring dashboard |
 | File storage | MinIO (local) / S3 (prod) | Drop-in swap via django-storages, no code changes |
-| LLM providers | OpenAI, Anthropic, Bedrock, Ollama | Chain of Responsibility, no vendor lock-in, local dev with zero API cost |
+| LLM providers | OpenAI, Anthropic, Bedrock, Gemini, Ollama | Chain of Responsibility, no vendor lock-in, local dev with zero API cost |
 | Observability | LangSmith + python-json-logger | LLM span tracing, request-ID propagation, JSON in prod |
 | Evaluation | RAGAS + GitHub Actions | Automated weekly regression against BM25-only baseline |
 

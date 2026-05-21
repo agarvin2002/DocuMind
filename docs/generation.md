@@ -94,13 +94,14 @@ class LLMProviderPort(Protocol):
 
 Any class with a matching `stream()` method satisfies this protocol — no `isinstance` check needed at runtime, no inheritance required. This means a `FakeLLMProvider` in tests satisfies the protocol simply by implementing `stream()`.
 
-**Four concrete providers** (all in `generation/llm.py`):
+**Five concrete providers** (all in `generation/llm.py`):
 
 | Provider | Class | Authentication | Notes |
 |----------|-------|---------------|-------|
 | OpenAI | `OpenAIProvider` | `OPENAI_API_KEY` | Uses `openai.OpenAI` SDK |
 | Anthropic | `AnthropicProvider` | `ANTHROPIC_API_KEY` | Uses Anthropic native SDK |
 | AWS Bedrock | `BedrockProvider` | `BEDROCK_AWS_*` credentials | Claude models via `AnthropicBedrock`; data stays in AWS VPC |
+| Google Gemini | `GeminiProvider` | `GEMINI_API_KEY` | Uses `google-genai` SDK; `thinking_budget=0` required for Gemini 2.5 Flash (thinking model returns no text otherwise) |
 | Ollama | `OllamaProvider` | None (local) | OpenAI-compatible API at `OLLAMA_BASE_URL`; no real API key |
 
 All four are decorated with `@traceable(name="...", run_type="llm")` — LangSmith captures full span data when `LANGCHAIN_TRACING_V2=true`. When tracing is disabled, `@traceable` is a no-op.
@@ -125,13 +126,15 @@ class FallbackLLMClient:
         raise AnswerGenerationError("All providers failed")
 ```
 
-The providers list is built at the [composition root](architecture.md#module-boundaries) (`query/services.py`) from whichever providers are configured in `.env`. The configured order: OpenAI → Anthropic → Bedrock → Ollama.
+The providers list is built at the [composition root](architecture.md#module-boundaries) (`query/services.py`) from whichever providers are configured in `.env`. The configured order: OpenAI → Anthropic → Bedrock → Gemini → Ollama.
 
 **If all providers fail:** `FallbackLLMClient.stream()` raises the last `AnswerGenerationError` it received. In the `/ask/` endpoint this is emitted as an `event: error` SSE event (since headers are already sent — see [SSE Wire Protocol](#sse-wire-protocol)). In the agent pipeline, the calling node catches the error and sets `state["error"]`, routing to `error_node`. Additionally, each provider has a **60-second circuit breaker cooldown** — a provider that fails is skipped on subsequent calls within that window to avoid paying its full timeout penalty on every request.
 
 **Zero-change extensibility:** Adding a new provider requires:
 1. Implement a class with `stream(system_prompt, user_message, *, temperature, max_tokens, timeout) -> Iterator[str]`
-2. Add it to the `providers` list in `query/services.py`
+2. Register it in `query/services.py` (conditionally on its API key env var being set)
+
+No changes to `FallbackLLMClient`, views, or services — the new provider is picked up automatically.
 
 No changes to `FallbackLLMClient`. No changes to any view or service. The protocol is structural — your class satisfies it automatically.
 
